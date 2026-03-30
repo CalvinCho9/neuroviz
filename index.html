@@ -452,39 +452,63 @@ const dl2=new THREE.DirectionalLight(0xff9966,0.25);dl2.position.set(-2,-1,-2);s
 // Brain group
 const brainGroup=new THREE.Group();scene.add(brainGroup);
 
-// Brain mesh
-const brainGeo=new THREE.SphereGeometry(0.9,64,48);
+// Brain mesh — multi-octave noise for cortical folds
+function cxNoise(x,y,z){
+  return 0.50*Math.sin(x*4.1+y*2.9)*Math.cos(y*5.2+z*3.1)*Math.sin(z*3.7+x*1.8)
+       + 0.25*Math.sin(x*8.3+z*5.9)*Math.cos(y*9.0+x*4.1)*Math.sin(z*7.2+y*5.3)
+       + 0.13*Math.sin(x*15.7+y*13.1)*Math.cos(y*16.9+z*12.3)*Math.sin(z*14.5+x*10.7);
+}
+const brainGeo=new THREE.SphereGeometry(0.9,128,96);
 const bp=brainGeo.attributes.position;
 for(let i=0;i<bp.count;i++){
   let x=bp.getX(i),y=bp.getY(i),z=bp.getZ(i);
-  const lat=Math.atan2(Math.sqrt(x*x+z*z),y);
-  const sq=1-0.12*Math.exp(-((lat-1.5)*(lat-1.5)));
-  const fd=1-0.15*Math.exp(-((z-0.7)*(z-0.7))/0.3);
-  bp.setXYZ(i,x*(x<0?0.88:1)*fd,y*sq,z*0.92);
+  const r=Math.sqrt(x*x+y*y+z*z)||1;
+  const nx=x/r,ny=y/r,nz=z/r;
+  // Anatomical shaping: frontal bulge, occipital pole, temporal flare, parietal flatten
+  const sh=1
+    +0.09*Math.exp(-Math.pow(z+0.52,2)/0.18)
+    +0.05*Math.exp(-Math.pow(z-0.78,2)/0.14)
+    +0.07*Math.exp(-Math.pow(y,2)/0.09)*Math.exp(-Math.pow(z-0.08,2)/0.35)*(Math.abs(x)/0.9)
+    -0.05*Math.exp(-Math.pow(y-0.86,2)/0.04)*Math.exp(-Math.pow(z-0.28,2)/0.2);
+  const w=cxNoise(x*2.7,y*2.7,z*2.7)*0.046;
+  bp.setXYZ(i,x*sh+nx*w, y*0.94+ny*w, z*0.92+nz*w);
 }
 brainGeo.computeVertexNormals();
-const brainMat=new THREE.MeshPhongMaterial({color:0x1a3a5c,emissive:0x051020,specular:0x224466,shininess:30,transparent:true,opacity:0.72});
+const brainMat=new THREE.MeshPhongMaterial({color:0x1a3a5c,emissive:0x051020,specular:0x336688,shininess:45,transparent:true,opacity:0.76});
 brainGroup.add(new THREE.Mesh(brainGeo,brainMat));
 
-// Fissure
-const fisCurve=new THREE.CatmullRomCurve3([
-  new THREE.Vector3(0,0.9,0.2),new THREE.Vector3(0,0.72,0.46),
-  new THREE.Vector3(0,0.3,0.8),new THREE.Vector3(0,-0.1,0.9),
-  new THREE.Vector3(0,-0.5,0.72),new THREE.Vector3(0,-0.85,0.3),
-]);
-brainGroup.add(new THREE.Mesh(new THREE.TubeGeometry(fisCurve,20,0.007,6,false),new THREE.MeshBasicMaterial({color:0x001122})));
+// Sulci — major anatomical folds
+const sulciMat=new THREE.MeshBasicMaterial({color:0x000d1a});
+function addSulcus(pts){
+  const c=new THREE.CatmullRomCurve3(pts.map(p=>new THREE.Vector3(p[0],p[1],p[2])));
+  brainGroup.add(new THREE.Mesh(new THREE.TubeGeometry(c,24,0.008,5,false),sulciMat));
+}
+addSulcus([[0,0.90,0.18],[0,0.74,0.44],[0,0.32,0.78],[0,-0.08,0.88],[0,-0.50,0.70],[0,-0.84,0.28]]); // interhemispheric
+addSulcus([[-0.04,0.86,-0.10],[-0.28,0.70,-0.02],[-0.52,0.46,0.04],[-0.64,0.18,0.12]]); // central sulcus L
+addSulcus([[0.04,0.86,-0.10],[0.28,0.70,-0.02],[0.52,0.46,0.04],[0.64,0.18,0.12]]);    // central sulcus R
+addSulcus([[-0.60,0.04,-0.44],[-0.76,0.02,-0.08],[-0.82,0.00,0.22],[-0.70,-0.02,0.40]]); // Sylvian L
+addSulcus([[0.60,0.04,-0.44],[0.76,0.02,-0.08],[0.82,0.00,0.22],[0.70,-0.02,0.40]]);     // Sylvian R
+addSulcus([[0,0.72,0.60],[0,0.52,0.72],[0,0.30,0.80]]);                                   // parieto-occipital mid
+addSulcus([[-0.06,0.71,0.60],[-0.22,0.54,0.70],[-0.38,0.34,0.72]]);                      // parieto-occipital L
+addSulcus([[0.06,0.71,0.60],[0.22,0.54,0.70],[0.38,0.34,0.72]]);                          // parieto-occipital R
+addSulcus([[-0.52,0.24,-0.32],[-0.68,0.22,0.04],[-0.64,0.22,0.34]]);                     // superior temporal L
+addSulcus([[0.52,0.24,-0.32],[0.68,0.22,0.04],[0.64,0.22,0.34]]);                         // superior temporal R
 
-// Cerebellum
-const cGeo=new THREE.SphereGeometry(0.35,32,24);
+// Cerebellum — with foliation ridges
+const cGeo=new THREE.SphereGeometry(0.35,48,32);
 const cp=cGeo.attributes.position;
-for(let i=0;i<cp.count;i++) cp.setXYZ(i,cp.getX(i)*1.4,cp.getY(i)*0.7,cp.getZ(i)*1.1);
+for(let i=0;i<cp.count;i++){
+  let cx=cp.getX(i),cy=cp.getY(i),cz=cp.getZ(i);
+  const fold=0.022*Math.cos(cy*18+cz*4);
+  cp.setXYZ(i,cx*1.38+fold,cy*0.68,cz*1.08);
+}
 cGeo.computeVertexNormals();
-const cMat=new THREE.MeshPhongMaterial({color:0x1a3a5c,emissive:0x051020,transparent:true,opacity:0.65});
-const cMesh=new THREE.Mesh(cGeo,cMat);cMesh.position.set(0,-0.6,-0.55);brainGroup.add(cMesh);
+const cMesh=new THREE.Mesh(cGeo,new THREE.MeshPhongMaterial({color:0x162840,emissive:0x040e18,transparent:true,opacity:0.68,shininess:20}));
+cMesh.position.set(0,-0.62,-0.54); brainGroup.add(cMesh);
 
 // Brain stem
-const stMesh=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.10,0.4,12),new THREE.MeshPhongMaterial({color:0x152535}));
-stMesh.position.set(0,-0.9,-0.05);stMesh.rotation.z=0.15;brainGroup.add(stMesh);
+const stMesh=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.09,0.38,12),new THREE.MeshPhongMaterial({color:0x122030,shininess:20}));
+stMesh.position.set(0,-0.90,-0.06);stMesh.rotation.z=0.14;brainGroup.add(stMesh);
 
 // Electrodes
 const SC=0.92; // brain scale factor
@@ -512,6 +536,53 @@ const hMeshes=ELECTRODES.map((el,i)=>{
   const m=new THREE.Mesh(hGeo,hMats[i]);
   m.position.copy(eMeshes[i].position);brainGroup.add(m);return m;
 });
+
+// Ripple rings — expand outward from active electrodes
+const rippleGeo=new THREE.RingGeometry(0.04,0.058,24);
+const rippleMats=ELECTRODES.map(()=>new THREE.MeshBasicMaterial({color:0x00d4ff,transparent:true,opacity:0,side:THREE.DoubleSide}));
+const rippleMeshes=ELECTRODES.map((el,i)=>{
+  const m=new THREE.Mesh(rippleGeo,rippleMats[i]);
+  m.position.copy(eMeshes[i].position);
+  const dir=eMeshes[i].position.clone().normalize();
+  m.lookAt(eMeshes[i].position.clone().add(dir));
+  brainGroup.add(m); return m;
+});
+const rippleT=new Float32Array(ELECTRODES.length);
+
+// Neural connection arcs between electrode pairs
+const CONN_PAIRS=[
+  ['Fp1','Fp2'],['F3','F4'],['C3','C4'],['P3','P4'],
+  ['F3','C3'],['F4','C4'],['C3','P3'],['C4','P4'],
+  ['Fz','Cz'],['Cz','Pz'],['F3','Fz'],['F4','Fz'],
+  ['C3','Cz'],['C4','Cz'],
+  ['F7','T7'],['F8','T8'],['T7','TP7'],['T8','TP8'],
+  ['FC1','FC2'],['FC5','FC6'],['FC1','C3'],['FC2','C4'],
+  ['P3','Pz'],['P4','Pz'],['T7','Cz'],['T8','Cz'],
+];
+function ePos(id){const e=ELECTRODES.find(e=>e.id===id);return e?new THREE.Vector3(e.pos[0]*SC,e.pos[2]*SC,-e.pos[1]*SC):null;}
+const connections=CONN_PAIRS.map(([a,b])=>{
+  const pa=ePos(a),pb=ePos(b);if(!pa||!pb)return null;
+  const mid=pa.clone().add(pb).multiplyScalar(0.5);
+  const push=mid.clone().normalize().multiplyScalar(mid.length()+0.14);
+  const curve=new THREE.CatmullRomCurve3([pa,push,pb]);
+  const mat=new THREE.MeshBasicMaterial({color:0x00d4ff,transparent:true,opacity:0});
+  const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,20,0.004,5,false),mat);
+  brainGroup.add(mesh);
+  const ai=ELECTRODES.findIndex(e=>e.id===a),bi=ELECTRODES.findIndex(e=>e.id===b);
+  return {mesh,mat,curve,ai,bi,pulseT:Math.random()};
+}).filter(Boolean);
+
+// Pulse particles — one traveling dot per connection
+const pulseMeshes=connections.map(()=>{
+  const m=new THREE.Mesh(
+    new THREE.SphereGeometry(0.014,8,6),
+    new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0})
+  );
+  brainGroup.add(m); return m;
+});
+
+// Current activity cache (populated by updateFrame, used by animate)
+const currentAct=new Float32Array(ELECTRODES.length);
 
 // Colour ramp: value 0→1 → THREE.Color
 function actColor(v) {
@@ -640,14 +711,23 @@ function updateFrame() {
 
   ELECTRODES.forEach((el,i)=>{
     const v=Math.max(0,Math.min(1,(currentRec.channels[el.id]||[])[fi]||0));
+    currentAct[i]=v;
     const col=actColor(v);
     aMats[i].color.copy(col);
-    aMats[i].opacity=v*0.65;
-    aMeshes[i].scale.setScalar(0.4+v*1.6);
+    aMats[i].opacity=v*0.62;
+    aMeshes[i].scale.setScalar(0.4+v*1.8);
     hMats[i].color.copy(col);
-    hMats[i].opacity=v>0.5?(v-0.5)*0.6:0;
+    hMats[i].opacity=v>0.45?(v-0.45)*0.58:0;
     const br=0.25+v*0.75;
     eMats[i].emissive.setRGB(br*col.r*0.5,br*col.g*0.5,br*col.b*0.5);
+  });
+  // Update connection arc opacity + pulse color based on endpoint activity
+  connections.forEach((c,ci)=>{
+    const str=Math.sqrt(currentAct[c.ai]*currentAct[c.bi]);
+    c.mat.opacity=str>0.30?(str-0.30)*0.50:0;
+    c.mat.color.copy(actColor(str));
+    pulseMeshes[ci].material.opacity=str>0.40?(str-0.40)*1.10:0;
+    pulseMeshes[ci].material.color.copy(actColor(Math.min(1,str+0.15)));
   });
 }
 
@@ -694,6 +774,23 @@ function animate(ts) {
   frameCount++;
   const pulse=0.72+0.28*Math.sin(frameCount*0.07);
   hMeshes.forEach((h,i)=>{if(hMats[i].opacity>0.01)hMats[i].opacity*=pulse;});
+  // Advance pulse particles along their connection arcs
+  connections.forEach((c,ci)=>{
+    const spd=currentAct[c.ai]+currentAct[c.bi];
+    c.pulseT=(c.pulseT+0.007*(1+spd))%1;
+    pulseMeshes[ci].position.copy(c.curve.getPoint(c.pulseT));
+  });
+  // Animate ripple rings outward from active electrodes
+  ELECTRODES.forEach((el,i)=>{
+    if(currentAct[i]>0.45){
+      rippleT[i]=(rippleT[i]+0.024)%1;
+      rippleMeshes[i].scale.setScalar(0.7+rippleT[i]*2.2);
+      rippleMats[i].opacity=currentAct[i]*(1-rippleT[i])*0.48;
+    } else {
+      rippleT[i]=0;
+      rippleMats[i].opacity*=0.82;
+    }
+  });
   renderer.render(scene,camera);
 }
 
