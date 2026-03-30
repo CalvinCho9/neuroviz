@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeuroViz — Real EEG Brain Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Space+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#050a0f; --bg2:#0b1520; --bg3:#0f1e2d;
+    --accent:#00d4ff; --accent2:#ff6b35; --accent3:#7fff7f;
+    --text:#e8f4f8; --text2:#7a9ab0;
+    --border:rgba(0,212,255,0.15); --panel:rgba(11,21,32,0.95);
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;overflow:hidden;height:100vh;width:100vw;}
+
+  #canvas-container{position:absolute;inset:0;}
+  #main-canvas{width:100%;height:100%;display:block;}
+
+  /* TOPBAR */
+  #topbar{
+    position:absolute;top:0;left:0;right:0;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 24px;
+    background:linear-gradient(to bottom,rgba(5,10,15,0.97),transparent);
+    pointer-events:none;z-index:10;
+  }
+  .logo{font-size:20px;font-weight:600;letter-spacing:-0.5px;}
+  .logo span{color:var(--accent);}
+  .logo-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text2);margin-top:3px;}
+  .controls-hint{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text2);text-align:right;line-height:1.9;}
+
+  /* LOADING OVERLAY */
+  #loading{
+    position:fixed;inset:0;background:var(--bg);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    z-index:100;transition:opacity 0.6s;
+  }
+  #loading.fade{opacity:0;pointer-events:none;}
+  .load-title{font-size:22px;font-weight:600;margin-bottom:6px;}
+  .load-title span{color:var(--accent);}
+  .load-sub{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text2);margin-bottom:32px;}
+  .load-bar-wrap{width:280px;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;}
+  .load-bar{height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width 0.4s;}
+  .load-status{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text2);margin-top:14px;min-height:16px;}
+  .load-citation{font-family:'IBM Plex Mono',monospace;font-size:9px;color:rgba(122,154,176,0.5);margin-top:40px;max-width:380px;text-align:center;line-height:1.8;}
+
+  /* LEFT PANEL */
+  #left-panel{
+    position:absolute;left:0;top:60px;bottom:0;width:300px;
+    background:var(--panel);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;z-index:10;overflow:hidden;
+  }
+  .panel-section{padding:14px 16px;border-bottom:1px solid var(--border);}
+  .panel-label{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;}
+
+  /* RECORDING CARDS */
+  .rec-card{
+    padding:10px 12px;margin-bottom:5px;
+    border:1px solid var(--border);border-radius:6px;
+    cursor:pointer;transition:all 0.18s;background:rgba(0,0,0,0.3);
+  }
+  .rec-card:hover{border-color:var(--accent);background:rgba(0,212,255,0.05);}
+  .rec-card.active{border-color:var(--accent);background:rgba(0,212,255,0.1);}
+  .rec-subj{font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text2);letter-spacing:0.5px;}
+  .rec-label{font-size:12px;font-weight:500;margin-top:2px;}
+  .rec-task{font-size:10px;color:var(--text2);margin-top:3px;line-height:1.4;}
+
+  /* PLAYBACK */
+  #playback{padding:14px 16px;border-bottom:1px solid var(--border);}
+  .time-display{font-family:'IBM Plex Mono',monospace;font-size:26px;font-weight:500;color:var(--accent);margin-bottom:10px;letter-spacing:2px;}
+  .time-unit{font-size:12px;color:var(--text2);margin-left:3px;}
+  .progress-bar{height:4px;background:rgba(255,255,255,0.08);border-radius:2px;cursor:pointer;margin-bottom:12px;position:relative;}
+  .progress-fill{height:100%;background:var(--accent);border-radius:2px;}
+  .playback-controls{display:flex;align-items:center;gap:8px;}
+  .btn{padding:6px 12px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text);font-family:'Space Grotesk',sans-serif;font-size:12px;cursor:pointer;transition:all 0.2s;}
+  .btn:hover{border-color:var(--accent);color:var(--accent);}
+  .btn.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:500;}
+  .btn.primary:hover{opacity:0.85;}
+  .speed-info{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text2);margin-left:auto;}
+
+  /* WAVE BANDS */
+  #wave-panel{padding:12px 16px;flex:1;overflow-y:auto;}
+  .wave-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .wave-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .wave-name{font-size:11px;font-weight:500;min-width:48px;}
+  .wave-freq{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text2);min-width:72px;}
+  .wave-track{flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden;}
+  .wave-fill{height:100%;border-radius:2px;transition:width 0.25s;}
+  .wave-pct{font-family:'IBM Plex Mono',monospace;font-size:10px;min-width:30px;text-align:right;}
+  .wave-desc{font-size:10px;color:var(--text2);line-height:1.5;margin:0 0 8px 17px;}
+
+  /* RIGHT PANEL */
+  #right-panel{
+    position:absolute;right:0;top:60px;width:256px;
+    background:var(--panel);border-left:1px solid var(--border);
+    z-index:10;display:flex;flex-direction:column;
+    max-height:calc(100vh - 60px);overflow:hidden;
+  }
+  #active-regions{padding:12px 14px;flex:1;overflow-y:auto;}
+  .region-item{margin-bottom:11px;}
+  .region-row{display:flex;justify-content:space-between;align-items:center;}
+  .region-name{font-size:11px;font-weight:500;}
+  .region-badge{font-family:'IBM Plex Mono',monospace;font-size:9px;padding:2px 5px;border-radius:3px;font-weight:500;}
+  .badge-hi{background:rgba(255,107,53,0.2);color:#ff6b35;}
+  .badge-md{background:rgba(255,215,0,0.15);color:#ffd700;}
+  .badge-lo{background:rgba(0,212,255,0.1);color:var(--accent);}
+  .region-track{height:2px;background:rgba(255,255,255,0.07);border-radius:1px;margin-top:4px;}
+  .region-fill{height:100%;border-radius:1px;transition:width 0.35s;}
+  .region-func{font-size:10px;color:var(--text2);margin-top:3px;line-height:1.4;}
+
+  /* NOTE BOX */
+  #note-box{padding:12px 14px;border-top:1px solid var(--border);background:rgba(0,0,0,0.25);}
+  #note-title{font-size:12px;font-weight:500;color:var(--accent);margin-bottom:5px;}
+  #note-text{font-size:10px;color:var(--text2);line-height:1.6;}
+
+  /* VIEW TOGGLES */
+  #view-toggles{
+    position:absolute;top:72px;left:50%;transform:translateX(-50%);
+    display:flex;gap:5px;z-index:10;
+  }
+  .view-btn{
+    padding:4px 11px;border:1px solid var(--border);border-radius:4px;
+    background:rgba(11,21,32,0.85);color:var(--text2);font-family:'IBM Plex Mono',monospace;
+    font-size:10px;cursor:pointer;transition:all 0.18s;letter-spacing:0.4px;
+  }
+  .view-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,0.07);}
+
+  /* DATA SOURCE BADGE */
+  #data-badge{
+    position:absolute;bottom:52px;right:268px;
+    font-family:'IBM Plex Mono',monospace;font-size:9px;color:rgba(0,212,255,0.4);
+    z-index:10;text-align:right;line-height:1.7;
+  }
+
+  /* LEGEND */
+  #legend{
+    position:absolute;bottom:18px;left:50%;transform:translateX(-50%);
+    display:flex;align-items:center;gap:18px;
+    background:var(--panel);border:1px solid var(--border);border-radius:8px;
+    padding:9px 18px;z-index:10;
+  }
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text2);}
+  .legend-swatch{width:22px;height:5px;border-radius:3px;}
+
+  /* TOOLTIP */
+  #tip{
+    position:absolute;background:var(--panel);border:1px solid var(--accent);
+    border-radius:6px;padding:7px 11px;pointer-events:none;
+    font-size:11px;z-index:20;display:none;max-width:170px;
+  }
+  #tip .tip-id{font-weight:500;color:var(--accent);}
+  #tip .tip-region{color:var(--text2);font-size:10px;margin-top:1px;}
+  #tip .tip-val{font-family:'IBM Plex Mono',monospace;font-size:10px;margin-top:4px;}
+
+  ::-webkit-scrollbar{width:3px;}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div id="loading">
+  <div class="load-title"><span>Neuro</span>Viz</div>
+  <div class="load-sub">Loading real EEG recordings from PhysioNet</div>
+  <div class="load-bar-wrap"><div class="load-bar" id="load-bar"></div></div>
+  <div class="load-status" id="load-status">Fetching data…</div>
+  <div class="load-citation">
+    Dataset: EEG Motor Movement/Imagery Dataset · PhysioNet<br>
+    Schalk G et al. (2004) IEEE Trans Biomed Eng 51(6):1034–1043<br>
+    Goldberger AL et al. (2000) Circulation 101(23):e215–e220
+  </div>
+</div>
+
+<div id="canvas-container"><canvas id="main-canvas"></canvas></div>
+
+<div id="topbar">
+  <div>
+    <div class="logo"><span>Neuro</span>Viz</div>
+    <div class="logo-sub">Real EEG · PhysioNet EEGMMIDB · 64-channel BCI2000</div>
+  </div>
+  <div class="controls-hint">
+    Left drag · Rotate &nbsp;|&nbsp; Right drag · Pan<br>
+    Scroll · Zoom &nbsp;|&nbsp; Hover electrode · Details
+  </div>
+</div>
+
+<div id="view-toggles">
+  <button class="view-btn active" onclick="setView('lateral',event)">Lateral</button>
+  <button class="view-btn" onclick="setView('top',event)">Superior</button>
+  <button class="view-btn" onclick="setView('front',event)">Frontal</button>
+  <button class="view-btn" onclick="setView('back',event)">Posterior</button>
+</div>
+
+<div id="left-panel">
+  <div class="panel-section">
+    <div class="panel-label">Recordings — 6 subjects</div>
+    <div id="rec-list"></div>
+  </div>
+  <div id="playback">
+    <div class="panel-label">Playback</div>
+    <div class="time-display" id="time-display">0.00<span class="time-unit">s</span></div>
+    <div class="progress-bar" id="progress-bar" onclick="seekTo(event)">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+    <div class="playback-controls">
+      <button class="btn" onclick="stepBack()">◀◀</button>
+      <button class="btn primary" id="play-btn" onclick="togglePlay()">▶ Play</button>
+      <button class="btn" onclick="stepForward()">▶▶</button>
+      <span class="speed-info" id="speed-info">1×</span>
+      <button class="btn" onclick="cycleSpeed()" style="padding:4px 8px;font-size:10px;">Speed</button>
+    </div>
+  </div>
+  <div id="wave-panel">
+    <div class="panel-label">Brainwave Bands</div>
+    <div id="wave-display"></div>
+  </div>
+</div>
+
+<div id="right-panel">
+  <div class="panel-section"><div class="panel-label">Active Regions</div></div>
+  <div id="active-regions"></div>
+  <div id="note-box">
+    <div id="note-title">Welcome</div>
+    <div id="note-text">Select a recording to explore real EEG data from the PhysioNet Motor Imagery dataset.</div>
+  </div>
+</div>
+
+<div id="data-badge">
+  PhysioNet EEGMMIDB v1.0.0<br>
+  Real 64-ch EEG · 160 Hz · BCI2000
+</div>
+
+<div id="legend">
+  <div class="legend-item">
+    <div class="legend-swatch" style="background:linear-gradient(to right,#051833,#0055bb)"></div>Low
+  </div>
+  <div class="legend-item">
+    <div class="legend-swatch" style="background:linear-gradient(to right,#005522,#00cc44)"></div>Moderate
+  </div>
+  <div class="legend-item">
+    <div class="legend-swatch" style="background:linear-gradient(to right,#993300,#ff3300)"></div>High
+  </div>
+</div>
+
+<div id="tip">
+  <div class="tip-id" id="tip-id"></div>
+  <div class="tip-region" id="tip-region"></div>
+  <div class="tip-val" id="tip-val"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// CONFIGURATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ★ REPLACE THIS with your raw GitHub URL after running prepare_eeg_data.py
+// Example: "https://raw.githubusercontent.com/yourname/neuroviz/main/eeg_data.json"
+const EEG_DATA_URL = "https://raw.githubusercontent.com/CalvinCho9/neuroviz/main/eeg_data.json";
+
+// Fallback: if URL is placeholder, use synthetic data so the viz still works
+const USE_FALLBACK = (EEG_DATA_URL === "https://raw.githubusercontent.com/CalvinCho9/neuroviz/main/eeg_data.json");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ELECTRODE MAP — 10-20 / 10-10 system positions on a unit sphere
+// (x = left-right, y = anterior-posterior, z = inferior-superior)
+// ─────────────────────────────────────────────────────────────────────────────
+const ELECTRODES = [
+  {id:'Fp1', pos:[-0.31, 0.92, 0.24], region:'Prefrontal L'},
+  {id:'Fp2', pos:[ 0.31, 0.92, 0.24], region:'Prefrontal R'},
+  {id:'F7',  pos:[-0.72, 0.48, 0.00], region:'Inferior Frontal L'},
+  {id:'F8',  pos:[ 0.72, 0.48, 0.00], region:'Inferior Frontal R'},
+  {id:'F3',  pos:[-0.50, 0.72, 0.46], region:'Middle Frontal L'},
+  {id:'F4',  pos:[ 0.50, 0.72, 0.46], region:'Middle Frontal R'},
+  {id:'Fz',  pos:[ 0.00, 0.72, 0.46], region:'Frontal Midline'},
+  {id:'C3',  pos:[-0.72, 0.00, 0.70], region:'Motor Cortex L'},
+  {id:'C4',  pos:[ 0.72, 0.00, 0.70], region:'Motor Cortex R'},
+  {id:'Cz',  pos:[ 0.00, 0.00, 1.00], region:'Central Midline'},
+  {id:'P3',  pos:[-0.50,-0.72, 0.46], region:'Parietal L'},
+  {id:'P4',  pos:[ 0.50,-0.72, 0.46], region:'Parietal R'},
+  {id:'Pz',  pos:[ 0.00,-0.60, 0.72], region:'Parietal Midline'},
+  {id:'P7',  pos:[-0.72,-0.48, 0.00], region:'Inferior Parietal L'},
+  {id:'P8',  pos:[ 0.72,-0.48, 0.00], region:'Inferior Parietal R'},
+  {id:'O1',  pos:[-0.31,-0.92, 0.20], region:'Visual Cortex L'},
+  {id:'O2',  pos:[ 0.31,-0.92, 0.20], region:'Visual Cortex R'},
+  {id:'Oz',  pos:[ 0.00,-1.00, 0.10], region:'Visual Cortex Central'},
+  {id:'T7',  pos:[-1.00, 0.00, 0.00], region:'Temporal L'},
+  {id:'T8',  pos:[ 1.00, 0.00, 0.00], region:'Temporal R'},
+  {id:'TP7', pos:[-0.85,-0.28,-0.08], region:'Temporoparietal L'},
+  {id:'TP8', pos:[ 0.85,-0.28,-0.08], region:'Temporoparietal R'},
+  {id:'FC1', pos:[-0.24, 0.40, 0.82], region:'Frontocentral L'},
+  {id:'FC2', pos:[ 0.24, 0.40, 0.82], region:'Frontocentral R'},
+  {id:'FC5', pos:[-0.68, 0.35, 0.44], region:'Frontocentral L'},
+  {id:'FC6', pos:[ 0.68, 0.35, 0.44], region:'Frontocentral R'},
+  {id:'CP1', pos:[-0.24,-0.40, 0.82], region:'Centroparietal L'},
+  {id:'CP2', pos:[ 0.24,-0.40, 0.82], region:'Centroparietal R'},
+  {id:'AF3', pos:[-0.42, 0.82, 0.36], region:'Anterior Frontal L'},
+  {id:'AF4', pos:[ 0.42, 0.82, 0.36], region:'Anterior Frontal R'},
+];
+
+const REGION_FUNCTIONS = {
+  'Prefrontal L':       'Decision making, working memory',
+  'Prefrontal R':       'Decision making, working memory',
+  'Middle Frontal L':   'Executive function, attention',
+  'Middle Frontal R':   'Executive function, spatial processing',
+  'Frontal Midline':    'Motor planning, attention control',
+  'Inferior Frontal L': "Language production (Broca's area)",
+  'Inferior Frontal R': 'Prosody, emotional speech',
+  'Motor Cortex L':     'Controls right-body movement',
+  'Motor Cortex R':     'Controls left-body movement',
+  'Central Midline':    'Sensorimotor integration',
+  'Parietal L':         'Math cognition, spatial attention',
+  'Parietal R':         'Spatial awareness, navigation',
+  'Parietal Midline':   'Sensory integration',
+  'Inferior Parietal L':'Language, reading',
+  'Inferior Parietal R':'Face recognition, space',
+  'Visual Cortex L':    'Right visual field processing',
+  'Visual Cortex R':    'Left visual field processing',
+  'Visual Cortex Central':'Central vision',
+  'Temporal L':         'Language comprehension (Wernicke)',
+  'Temporal R':         'Melody, prosody, faces',
+  'Temporoparietal L':  'Language, reading',
+  'Temporoparietal R':  'Attention, social cognition',
+  'Frontocentral L':    'Motor preparation',
+  'Frontocentral R':    'Motor preparation',
+  'Centroparietal L':   'Somatosensory feedback',
+  'Centroparietal R':   'Somatosensory feedback',
+  'Anterior Frontal L': 'Planning, prospective memory',
+  'Anterior Frontal R': 'Planning, creative thinking',
+};
+
+const WAVE_BANDS = [
+  {key:'delta', name:'Delta', freq:'0.5–4 Hz',  color:'#8855ff', desc:'Deep sleep, unconscious processing'},
+  {key:'theta', name:'Theta', freq:'4–8 Hz',    color:'#3399ff', desc:'Memory encoding, drowsiness, creativity'},
+  {key:'alpha', name:'Alpha', freq:'8–13 Hz',   color:'#00cc88', desc:'Relaxed awareness, visual idle state'},
+  {key:'beta',  name:'Beta',  freq:'13–30 Hz',  color:'#ffaa00', desc:'Active thinking, focus, alertness'},
+  {key:'gamma', name:'Gamma', freq:'30–45 Hz',  color:'#ff4444', desc:'Peak cognition, learning, perception'},
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SYNTHETIC FALLBACK DATA (used only if EEG_DATA_URL not yet set)
+// ─────────────────────────────────────────────────────────────────────────────
+function buildFallbackData() {
+  const SRATE = 20, DURATION = 12, N = SRATE * DURATION;
+  const sn = (t,f,a,p=0) => a * Math.sin(2*Math.PI*f*t+p);
+  const nr = a => (Math.random()-0.5)*a;
+
+  const scenarios = [
+    { label:'Resting — Eyes Open',     task:'Subject sitting with eyes open.',
+      note:'Eyes-open rest: alpha is suppressed as the visual cortex processes incoming light. Compare with eyes-closed to see the classic alpha-blocking effect.',
+      gen:(id,reg,t)=>{ const isO=reg.includes('Visual')||reg.includes('Parietal'); return Math.max(0,Math.min(1,isO?0.2+sn(t,20,0.1)+nr(0.07):0.15+sn(t,10,0.05)+nr(0.05))); },
+      bands:t=>({delta:0.1,theta:0.15,alpha:0.2+sn(t,0.3,0.08),beta:0.35+sn(t,0.2,0.07),gamma:0.2}) },
+    { label:'Resting — Eyes Closed',   task:'Subject sitting with eyes closed.',
+      note:'Eyes closed: posterior alpha rhythm (8–13 Hz) dominates. This idle rhythm is the most robust finding in EEG research, discovered by Hans Berger in 1929.',
+      gen:(id,reg,t)=>{ const isO=reg.includes('Visual')||reg.includes('Parietal'); return Math.max(0,Math.min(1,isO?0.6+sn(t,10,0.28)+nr(0.05):0.2+sn(t,10,0.1)+nr(0.04))); },
+      bands:t=>({delta:0.1,theta:0.15,alpha:0.82+sn(t,0.25,0.1),beta:0.12,gamma:0.05}) },
+    { label:'Motor Imagery — Left Fist', task:'Imagining opening/closing LEFT fist.',
+      note:'Right motor cortex (C4) desynchronises in the beta band — contralateral to the imagined hand. This ERD (event-related desynchronisation) is the signal used in BCI prosthetic systems.',
+      gen:(id,reg,t)=>{ const im=0.5+0.5*Math.abs(Math.sin(t*0.4)); const isRM=reg.includes('Motor Cortex R')||id==='C4'||id==='FC2'||id==='CP2'; return Math.max(0,Math.min(1,isRM?(0.65+sn(t,20,0.15)+nr(0.06))*im:0.15+nr(0.04))); },
+      bands:t=>({delta:0.08,theta:0.2,alpha:0.25,beta:0.72+sn(t,0.4,0.15),gamma:0.3}) },
+    { label:'Motor Imagery — Right Fist', task:'Imagining opening/closing RIGHT fist.',
+      note:'Left motor cortex (C3) desynchronises — contralateral to the right hand. The clear hemispheric asymmetry between this and the left-fist condition is what BCI decoders use to classify intended movement.',
+      gen:(id,reg,t)=>{ const im=0.5+0.5*Math.abs(Math.sin(t*0.4)); const isLM=reg.includes('Motor Cortex L')||id==='C3'||id==='FC1'||id==='CP1'||id==='FC5'; return Math.max(0,Math.min(1,isLM?(0.65+sn(t,20,0.15)+nr(0.06))*im:0.15+nr(0.04))); },
+      bands:t=>({delta:0.08,theta:0.2,alpha:0.25,beta:0.72+sn(t,0.4,0.15),gamma:0.3}) },
+    { label:'Motor Imagery — Both Fists', task:'Imagining opening/closing BOTH fists.',
+      note:'Bilateral motor imagery activates both hemispheres symmetrically. Frontocentral electrodes show broad beta suppression — distinct from the unilateral asymmetry seen in single-hand conditions.',
+      gen:(id,reg,t)=>{ const im=0.5+0.5*Math.abs(Math.sin(t*0.35)); const isM=reg.includes('Motor')||reg.includes('Frontocentral')||id==='Cz'; return Math.max(0,Math.min(1,isM?(0.6+sn(t,20,0.14)+nr(0.07))*im:0.15+nr(0.04))); },
+      bands:t=>({delta:0.08,theta:0.22,alpha:0.2,beta:0.78+sn(t,0.35,0.12),gamma:0.32}) },
+    { label:'Motor Imagery — Both Feet', task:'Imagining opening/closing both feet.',
+      note:'Foot imagery activates medial motor cortex near Cz — the homunculus maps feet to the top of the motor strip. This spatial difference from hand imagery is used in vertical BCI control axes.',
+      gen:(id,reg,t)=>{ const im=0.5+0.5*Math.abs(Math.sin(t*0.38)); const isCtr=id==='Cz'||id==='Pz'||id==='CP1'||id==='CP2'; return Math.max(0,Math.min(1,isCtr?(0.7+sn(t,20,0.15)+nr(0.05))*im:0.12+nr(0.04))); },
+      bands:t=>({delta:0.08,theta:0.2,alpha:0.22,beta:0.74+sn(t,0.38,0.12),gamma:0.28}) },
+  ];
+
+  return scenarios.map((sc, i) => {
+    const channels = {};
+    const times = [];
+    for (let k=0; k<N; k++) {
+      const t = k/SRATE;
+      times.push(parseFloat(t.toFixed(3)));
+      ELECTRODES.forEach(el => {
+        if (!channels[el.id]) channels[el.id] = [];
+        channels[el.id].push(parseFloat(sc.gen(el.id, el.region, t).toFixed(3)));
+      });
+    }
+    channels._times = times; channels._srate = SRATE;
+    const bandKeys = ['delta','theta','alpha','beta','gamma'];
+    const bands = {};
+    bandKeys.forEach(bk => { bands[bk] = []; });
+    for (let k=0; k<N; k++) {
+      const t = k/SRATE;
+      const bv = sc.bands(t);
+      bandKeys.forEach(bk => bands[bk].push(parseFloat(Math.max(0,Math.min(1,bv[bk]||0)).toFixed(3))));
+    }
+    return { id:i, label:sc.label, task:sc.task, note:sc.note,
+             subject:`S00${i+1}`, run:`R0${i*2+1}`,
+             channels, bands, duration:DURATION, srate:SRATE,
+             citation:'Synthetic fallback — set EEG_DATA_URL to use real data' };
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THREE.JS SETUP
+// ─────────────────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('main-canvas');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setClearColor(0x050a0f,1);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, canvas.clientWidth/canvas.clientHeight, 0.1, 100);
+
+function resize() {
+  renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+  camera.aspect = canvas.clientWidth / canvas.clientHeight;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize); resize();
+
+// Orbit
+let drag=false, rightDrag=false, lastMX=0, lastMY=0;
+let sph={theta:0, phi:Math.PI/2}, panOff=new THREE.Vector3(), zoom=3.5;
+const TARGET=new THREE.Vector3();
+
+function updateCam() {
+  const x=zoom*Math.sin(sph.phi)*Math.sin(sph.theta);
+  const y=zoom*Math.cos(sph.phi);
+  const z=zoom*Math.sin(sph.phi)*Math.cos(sph.theta);
+  camera.position.set(x+TARGET.x+panOff.x, y+TARGET.y+panOff.y, z+TARGET.z+panOff.z);
+  camera.lookAt(TARGET.x+panOff.x, TARGET.y+panOff.y, TARGET.z+panOff.z);
+}
+canvas.addEventListener('mousedown',e=>{drag=true;rightDrag=e.button===2;lastMX=e.clientX;lastMY=e.clientY;});
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+window.addEventListener('mousemove',e=>{
+  if(!drag)return;
+  const dx=e.clientX-lastMX, dy=e.clientY-lastMY;
+  if(rightDrag){panOff.x-=dx*0.003;panOff.y+=dy*0.003;}
+  else{sph.theta-=dx*0.008;sph.phi=Math.max(0.1,Math.min(Math.PI-0.1,sph.phi+dy*0.008));}
+  lastMX=e.clientX;lastMY=e.clientY;updateCam();
+});
+window.addEventListener('mouseup',()=>drag=false);
+canvas.addEventListener('wheel',e=>{zoom=Math.max(1.8,Math.min(8,zoom+e.deltaY*0.005));updateCam();},{passive:true});
+updateCam();
+
+// Lights
+scene.add(new THREE.AmbientLight(0x334455,0.9));
+const dl=new THREE.DirectionalLight(0xaaccff,0.6);dl.position.set(2,3,2);scene.add(dl);
+const dl2=new THREE.DirectionalLight(0xff9966,0.25);dl2.position.set(-2,-1,-2);scene.add(dl2);
+
+// Brain group
+const brainGroup=new THREE.Group();scene.add(brainGroup);
+
+// Brain mesh
+const brainGeo=new THREE.SphereGeometry(0.9,64,48);
+const bp=brainGeo.attributes.position;
+for(let i=0;i<bp.count;i++){
+  let x=bp.getX(i),y=bp.getY(i),z=bp.getZ(i);
+  const lat=Math.atan2(Math.sqrt(x*x+z*z),y);
+  const sq=1-0.12*Math.exp(-(lat-1.5)**2);
+  const fd=1-0.15*Math.exp(-(z-0.7)**2/0.3);
+  bp.setXYZ(i,x*(x<0?0.88:1)*fd,y*sq,z*0.92);
+}
+brainGeo.computeVertexNormals();
+const brainMat=new THREE.MeshPhongMaterial({color:0x1a3a5c,emissive:0x051020,specular:0x224466,shininess:30,transparent:true,opacity:0.72});
+brainGroup.add(new THREE.Mesh(brainGeo,brainMat));
+
+// Fissure
+const fisCurve=new THREE.CatmullRomCurve3([
+  new THREE.Vector3(0,0.9,0.2),new THREE.Vector3(0,0.72,0.46),
+  new THREE.Vector3(0,0.3,0.8),new THREE.Vector3(0,-0.1,0.9),
+  new THREE.Vector3(0,-0.5,0.72),new THREE.Vector3(0,-0.85,0.3),
+]);
+brainGroup.add(new THREE.Mesh(new THREE.TubeGeometry(fisCurve,20,0.007,6,false),new THREE.MeshBasicMaterial({color:0x001122})));
+
+// Cerebellum
+const cGeo=new THREE.SphereGeometry(0.35,32,24);
+const cp=cGeo.attributes.position;
+for(let i=0;i<cp.count;i++) cp.setXYZ(i,cp.getX(i)*1.4,cp.getY(i)*0.7,cp.getZ(i)*1.1);
+cGeo.computeVertexNormals();
+const cMat=new THREE.MeshPhongMaterial({color:0x1a3a5c,emissive:0x051020,transparent:true,opacity:0.65});
+const cMesh=new THREE.Mesh(cGeo,cMat);cMesh.position.set(0,-0.6,-0.55);brainGroup.add(cMesh);
+
+// Brain stem
+const stMesh=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.10,0.4,12),new THREE.MeshPhongMaterial({color:0x152535}));
+stMesh.position.set(0,-0.9,-0.05);stMesh.rotation.z=0.15;brainGroup.add(stMesh);
+
+// Electrodes
+const SC=0.92; // brain scale factor
+const eGeo=new THREE.SphereGeometry(0.027,14,10);
+const eMats=ELECTRODES.map(()=>new THREE.MeshPhongMaterial({color:0xffffff,emissive:0x446688,shininess:80,transparent:true,opacity:0.92}));
+const eMeshes=ELECTRODES.map((el,i)=>{
+  const m=new THREE.Mesh(eGeo,eMats[i]);
+  m.position.set(el.pos[0]*SC, el.pos[2]*SC, -el.pos[1]*SC);
+  m.userData={index:i,id:el.id,region:el.region};
+  brainGroup.add(m); return m;
+});
+
+// Activity blobs
+const aGeo=new THREE.SphereGeometry(0.088,12,8);
+const aMats=ELECTRODES.map(()=>new THREE.MeshBasicMaterial({color:0x003399,transparent:true,opacity:0}));
+const aMeshes=ELECTRODES.map((el,i)=>{
+  const m=new THREE.Mesh(aGeo,aMats[i]);
+  m.position.copy(eMeshes[i].position);brainGroup.add(m);return m;
+});
+
+// Halo glow
+const hGeo=new THREE.SphereGeometry(0.054,14,10);
+const hMats=ELECTRODES.map(()=>new THREE.MeshBasicMaterial({color:0x00aaff,transparent:true,opacity:0,side:THREE.BackSide}));
+const hMeshes=ELECTRODES.map((el,i)=>{
+  const m=new THREE.Mesh(hGeo,hMats[i]);
+  m.position.copy(eMeshes[i].position);brainGroup.add(m);return m;
+});
+
+// Colour ramp: value 0→1 → THREE.Color
+function actColor(v) {
+  const ramp=[[0.03,0.07,0.25],[0.0,0.28,0.75],[0.0,0.72,0.5],[0.35,0.88,0.1],[0.95,0.62,0.0],[0.95,0.1,0.0]];
+  const t=Math.max(0,Math.min(1,v))*(ramp.length-1);
+  const i=Math.floor(t),f=t-i;
+  const a=ramp[Math.min(i,ramp.length-1)], b=ramp[Math.min(i+1,ramp.length-1)];
+  return new THREE.Color(a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f, a[2]+(b[2]-a[2])*f);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PLAYBACK STATE
+// ─────────────────────────────────────────────────────────────────────────────
+let recordings=[], currentRec=null;
+let playTime=0, playing=false, playSpeed=1, speedIdx=1;
+let lastTS=null, frameCount=0;
+const SPEEDS=[0.5,1,2,4];
+
+function loadRecording(idx) {
+  currentRec=recordings[idx];
+  playTime=0; playing=true;
+  document.getElementById('play-btn').textContent='⏸ Pause';
+  document.querySelectorAll('.rec-card').forEach((c,i)=>c.classList.toggle('active',i===idx));
+  document.getElementById('note-title').textContent=currentRec.label;
+  document.getElementById('note-text').textContent=currentRec.note||currentRec.task;
+  updateUI();
+}
+
+function togglePlay(){
+  if(!currentRec){loadRecording(0);return;}
+  playing=!playing;
+  document.getElementById('play-btn').textContent=playing?'⏸ Pause':'▶ Play';
+}
+function stepBack(){if(currentRec){playTime=Math.max(0,playTime-0.5);updateFrame();}}
+function stepForward(){if(currentRec){playTime=(playTime+0.5)%currentRec.duration;updateFrame();}}
+function cycleSpeed(){speedIdx=(speedIdx+1)%SPEEDS.length;playSpeed=SPEEDS[speedIdx];document.getElementById('speed-info').textContent=playSpeed+'×';}
+function seekTo(e){
+  if(!currentRec)return;
+  const bar=document.getElementById('progress-bar');
+  const r=bar.getBoundingClientRect();
+  playTime=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width))*currentRec.duration;
+  updateFrame();
+}
+function setView(v, e) {
+  document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
+  if(e&&e.target)e.target.classList.add('active');
+  const views={lateral:[3.5,Math.PI/2,0],top:[3.5,0.12,0],front:[3.5,Math.PI/2,0],back:[3.5,Math.PI/2,Math.PI]};
+  const [z,phi,theta]=views[v];
+  zoom=z;sph.phi=phi;sph.theta=theta;updateCam();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UI UPDATES
+// ─────────────────────────────────────────────────────────────────────────────
+function buildRecList() {
+  document.getElementById('rec-list').innerHTML=recordings.map((r,i)=>`
+    <div class="rec-card" onclick="loadRecording(${i})">
+      <div class="rec-subj">${r.subject} · ${r.run} · ${r.citation?'REAL EEG':'SYNTHETIC'}</div>
+      <div class="rec-label">${r.label}</div>
+      <div class="rec-task">${r.task}</div>
+    </div>`).join('');
+}
+
+function getFrameIdx() {
+  if(!currentRec)return 0;
+  return Math.min(Math.floor(playTime*currentRec.srate), currentRec.channels._times.length-1);
+}
+
+function updateUI() {
+  if(!currentRec)return;
+  const pct=(playTime/currentRec.duration)*100;
+  document.getElementById('progress-fill').style.width=pct+'%';
+  document.getElementById('time-display').innerHTML=`${playTime.toFixed(2)}<span class="time-unit">s</span>`;
+}
+
+function updateWaves(fi) {
+  if(!currentRec)return;
+  document.getElementById('wave-display').innerHTML=WAVE_BANDS.map(wb=>{
+    const arr=currentRec.bands[wb.key]||[];
+    const v=Math.max(0,Math.min(1,arr[fi]||0));
+    const pct=Math.round(v*100);
+    return `<div class="wave-row">
+      <div class="wave-dot" style="background:${wb.color}"></div>
+      <div class="wave-name" style="color:${wb.color}">${wb.name}</div>
+      <div class="wave-freq">${wb.freq}</div>
+      <div class="wave-track"><div class="wave-fill" style="width:${pct}%;background:${wb.color}"></div></div>
+      <div class="wave-pct" style="color:${wb.color}">${pct}%</div>
+    </div>
+    <div class="wave-desc">${wb.desc}</div>`;
+  }).join('');
+}
+
+function updateRegions(fi) {
+  if(!currentRec)return;
+  const regionMax={};
+  ELECTRODES.forEach(el=>{
+    const v=(currentRec.channels[el.id]||[])[fi]||0;
+    if(!regionMax[el.region]||v>regionMax[el.region])regionMax[el.region]=v;
+  });
+  const sorted=Object.entries(regionMax).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  document.getElementById('active-regions').innerHTML=sorted.map(([reg,v])=>{
+    const pct=Math.round(v*100);
+    const [bc,bl]=v>0.65?['badge-hi','HIGH']:v>0.35?['badge-md','MED']:['badge-lo','LOW'];
+    const barCol=v>0.65?'#ff6b35':v>0.35?'#ffd700':'#00d4ff';
+    const fn=REGION_FUNCTIONS[reg]||'Neural processing';
+    return `<div class="region-item">
+      <div class="region-row">
+        <span class="region-name">${reg}</span>
+        <span class="region-badge ${bc}">${bl}</span>
+      </div>
+      <div class="region-track"><div class="region-fill" style="width:${pct}%;background:${barCol}"></div></div>
+      <div class="region-func">${fn}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 3D FRAME UPDATE
+// ─────────────────────────────────────────────────────────────────────────────
+function updateFrame() {
+  if(!currentRec)return;
+  const fi=getFrameIdx();
+  updateUI();
+  updateWaves(fi);
+  updateRegions(fi);
+
+  ELECTRODES.forEach((el,i)=>{
+    const v=Math.max(0,Math.min(1,(currentRec.channels[el.id]||[])[fi]||0));
+    const col=actColor(v);
+    aMats[i].color.copy(col);
+    aMats[i].opacity=v*0.65;
+    aMeshes[i].scale.setScalar(0.4+v*1.6);
+    hMats[i].color.copy(col);
+    hMats[i].opacity=v>0.5?(v-0.5)*0.6:0;
+    const br=0.25+v*0.75;
+    eMats[i].emissive.setRGB(br*col.r*0.5,br*col.g*0.5,br*col.b*0.5);
+  });
+}
+
+// Raycaster tooltip
+const raycaster=new THREE.Raycaster();
+const mouse=new THREE.Vector2();
+canvas.addEventListener('mousemove',e=>{
+  const r=canvas.getBoundingClientRect();
+  mouse.x=((e.clientX-r.left)/r.width)*2-1;
+  mouse.y=-((e.clientY-r.top)/r.height)*2+1;
+  raycaster.setFromCamera(mouse,camera);
+  const hits=raycaster.intersectObjects(eMeshes);
+  const tip=document.getElementById('tip');
+  if(hits.length){
+    const obj=hits[0].object;
+    const i=obj.userData.index;
+    const el=ELECTRODES[i];
+    const fi=getFrameIdx();
+    const v=currentRec?(currentRec.channels[el.id]||[])[fi]||0:0;
+    document.getElementById('tip-id').textContent=el.id;
+    document.getElementById('tip-region').textContent=el.region;
+    document.getElementById('tip-val').textContent=`Activity: ${Math.round(v*100)}%  ·  ${v>0.65?'High':v>0.35?'Moderate':'Low'}`;
+    tip.style.display='block';
+    tip.style.left=(e.clientX+15)+'px';
+    tip.style.top=(e.clientY-8)+'px';
+    canvas.style.cursor='crosshair';
+  } else {
+    tip.style.display='none';
+    canvas.style.cursor='default';
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDER LOOP
+// ─────────────────────────────────────────────────────────────────────────────
+function animate(ts) {
+  requestAnimationFrame(animate);
+  if(playing&&currentRec){
+    if(lastTS)playTime=(playTime+(ts-lastTS)/1000*playSpeed)%currentRec.duration;
+    lastTS=ts;
+    updateFrame();
+  } else lastTS=null;
+  if(!drag&&currentRec)brainGroup.rotation.y+=0.0007;
+  frameCount++;
+  const pulse=0.72+0.28*Math.sin(frameCount*0.07);
+  hMeshes.forEach((h,i)=>{if(hMats[i].opacity>0.01)hMats[i].opacity*=pulse;});
+  renderer.render(scene,camera);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BOOT — LOAD DATA
+// ─────────────────────────────────────────────────────────────────────────────
+function setLoadStatus(msg, pct) {
+  document.getElementById('load-status').textContent=msg;
+  document.getElementById('load-bar').style.width=pct+'%';
+}
+
+async function boot() {
+  setLoadStatus('Initialising…', 5);
+  await new Promise(r=>setTimeout(r,100));
+
+  if(USE_FALLBACK) {
+    setLoadStatus('EEG_DATA_URL not set — using synthetic data (see README)', 30);
+    await new Promise(r=>setTimeout(r,600));
+    setLoadStatus('Building synthetic EEG patterns…', 60);
+    await new Promise(r=>setTimeout(r,400));
+    recordings=buildFallbackData();
+    setLoadStatus('Ready', 100);
+  } else {
+    try {
+      setLoadStatus('Fetching EEG data from GitHub…', 20);
+      const res=await fetch(EEG_DATA_URL);
+      if(!res.ok)throw new Error(`HTTP ${res.status}`);
+      setLoadStatus('Parsing recordings…', 60);
+      const json=await res.json();
+      recordings=json.recordings||[];
+      if(!recordings.length)throw new Error('Empty recordings array');
+      setLoadStatus(`Loaded ${recordings.length} real EEG recordings`, 90);
+      await new Promise(r=>setTimeout(r,300));
+      setLoadStatus('Ready', 100);
+    } catch(err) {
+      setLoadStatus(`Could not load real data (${err.message}) — using synthetic`, 50);
+      await new Promise(r=>setTimeout(r,1500));
+      recordings=buildFallbackData();
+      setLoadStatus('Ready (synthetic)', 100);
+    }
+  }
+
+  await new Promise(r=>setTimeout(r,300));
+  const loadEl=document.getElementById('loading');
+  loadEl.classList.add('fade');
+  setTimeout(()=>loadEl.style.display='none',700);
+
+  buildRecList();
+  loadRecording(0);
+  animate();
+}
+
+boot();
+</script>
+</body>
+</html>
