@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NeuroViz — Real EEG Brain Explorer</title>
+<title>NeuroViz Pro — Anatomical EEG Explorer</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -28,981 +28,299 @@
   .logo{font-size:20px;font-weight:600;letter-spacing:-0.5px;}
   .logo span{color:var(--accent);}
   .logo-sub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text2);margin-top:3px;}
-  .controls-hint{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text2);text-align:right;line-height:1.9;}
 
-  #loading{
-    position:fixed;inset:0;background:var(--bg);
-    display:flex;flex-direction:column;align-items:center;justify-content:center;
-    z-index:100;transition:opacity 0.6s;
-  }
-  #loading.fade{opacity:0;pointer-events:none;}
-  .load-title{font-size:22px;font-weight:600;margin-bottom:6px;}
-  .load-title span{color:var(--accent);}
-  .load-sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);margin-bottom:32px;}
-  .load-bar-wrap{width:280px;height:3px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden;}
-  .load-bar{height:100%;background:var(--accent);border-radius:2px;width:0%;transition:width 0.4s;}
-  .load-status{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);margin-top:14px;min-height:16px;}
-  .load-citation{font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(110,143,165,0.5);margin-top:40px;max-width:380px;text-align:center;line-height:1.8;}
-
-  /* LEFT PANEL */
+  /* LEFT PANEL: SIMPLIFIED */
   #left-panel{
-    position:absolute;left:0;top:60px;bottom:0;width:280px;
+    position:absolute;left:0;top:60px;bottom:0;width:300px;
     background:var(--panel);border-right:1px solid var(--border);
     display:flex;flex-direction:column;z-index:10;overflow:hidden;
   }
   .panel-section{padding:14px 16px;border-bottom:1px solid var(--border);}
-  .panel-section.scrollable{overflow-y:auto;flex:1;min-height:0;}
+  .panel-section.scrollable{overflow-y:auto;flex:1;}
   .panel-label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;}
 
   .rec-card{
-    padding:10px 12px;margin-bottom:5px;
-    border:1px solid var(--border);border-radius:6px;
-    cursor:pointer;transition:all 0.18s;background:rgba(0,0,0,0.3);
+    padding:12px;margin-bottom:8px;
+    border:1px solid var(--border);border-radius:8px;
+    cursor:pointer;transition:all 0.2s;background:rgba(0,0,0,0.3);
   }
   .rec-card:hover{border-color:var(--accent);background:rgba(0,212,255,0.05);}
-  .rec-card.active{border-color:var(--accent);background:rgba(0,212,255,0.1);}
-  .rec-num{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--accent);opacity:0.6;letter-spacing:0.5px;}
-  .rec-label{font-size:12px;font-weight:500;margin-top:2px;}
-  .rec-task{font-size:10px;color:var(--text2);margin-top:3px;line-height:1.5;}
-  .rec-look{font-size:9px;color:var(--accent);margin-top:4px;line-height:1.4;opacity:0.7;}
-  .rec-look b{font-weight:500;color:var(--accent);opacity:1;}
+  .rec-card.active{border-color:var(--accent);background:rgba(0,212,255,0.12);box-shadow: 0 0 15px rgba(0,212,255,0.1);}
+  .rec-label{font-size:13px;font-weight:600;color:var(--text);}
+  .rec-task{font-size:11px;color:var(--text2);margin-top:4px;line-height:1.4;}
+  .rec-look{font-size:10px;color:var(--accent);margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,212,255,0.1);}
 
-  #playback{padding:14px 16px;border-bottom:1px solid var(--border);}
-  .time-display{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:500;color:var(--accent);margin-bottom:10px;letter-spacing:2px;}
-  .time-unit{font-size:12px;color:var(--text2);margin-left:3px;}
-  .progress-bar{height:4px;background:rgba(255,255,255,0.08);border-radius:2px;cursor:pointer;margin-bottom:12px;position:relative;}
-  .progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width 0.1s linear;}
-  .playback-controls{display:flex;align-items:center;gap:8px;}
-  .btn{padding:6px 12px;border:1px solid var(--border);border-radius:4px;background:transparent;color:var(--text);font-family:'Outfit',sans-serif;font-size:12px;cursor:pointer;transition:all 0.2s;}
-  .btn:hover{border-color:var(--accent);color:var(--accent);}
-  .btn.primary{background:var(--accent);color:#000;border-color:var(--accent);font-weight:500;}
-  .btn.primary:hover{opacity:0.85;}
-  .speed-info{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--accent);margin-left:auto;}
+  #playback{padding:16px;background:rgba(0,0,0,0.2);}
+  .time-display{font-family:'JetBrains Mono',monospace;font-size:24px;color:var(--accent);margin-bottom:12px;}
+  .playback-controls{display:flex;align-items:center;justify-content:space-between;}
+  .btn{padding:8px 16px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--text);font-size:12px;cursor:pointer;}
+  .btn.primary{background:var(--accent);color:#000;font-weight:600;}
+  .speed-badge{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);}
 
-  #wave-panel{padding:12px 16px;flex:1;overflow-y:auto;}
-  .wave-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-  .wave-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
-  .wave-name{font-size:11px;font-weight:500;min-width:48px;}
-  .wave-freq{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text2);min-width:72px;}
-  .wave-track{flex:1;height:3px;background:rgba(255,255,255,0.07);border-radius:2px;overflow:hidden;}
-  .wave-fill{height:100%;border-radius:2px;transition:width 0.25s;}
-  .wave-pct{font-family:'JetBrains Mono',monospace;font-size:10px;min-width:30px;text-align:right;}
-  .wave-desc{font-size:9px;color:var(--text2);line-height:1.5;margin:0 0 4px 17px;}
-
-  /* RIGHT PANEL */
+  /* RIGHT PANEL: STABLE */
   #right-panel{
-    position:absolute;right:0;top:60px;width:250px;
+    position:absolute;right:0;top:60px;width:260px;bottom:0;
     background:var(--panel);border-left:1px solid var(--border);
     z-index:10;display:flex;flex-direction:column;
-    max-height:calc(100vh - 60px);overflow:hidden;
   }
-  .filter-section{padding:12px 14px;border-bottom:1px solid var(--border);}
-  .filter-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;}
+  .filter-chips{display:flex;flex-wrap:wrap;gap:4px;padding:12px;border-bottom:1px solid var(--border);}
   .filter-chip{
-    padding:3px 9px;border:1px solid var(--border);border-radius:12px;
-    font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text2);
-    cursor:pointer;transition:all 0.18s;background:transparent;
+    padding:4px 10px;border:1px solid var(--border);border-radius:12px;
+    font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text2);cursor:pointer;
   }
-  .filter-chip:hover{border-color:var(--accent);color:var(--accent);}
-  .filter-chip.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,0.1);}
-  #active-regions{padding:8px 14px;flex:1;overflow-y:auto;}
-  .region-item{margin-bottom:8px;transition:opacity 0.3s;}
+  .filter-chip.active{background:var(--accent);color:#000;border-color:var(--accent);}
+
+  #active-regions{padding:12px;flex:1;overflow-y:auto;}
+  .region-item{margin-bottom:12px;transition:all 0.3s;}
   .region-item.hidden{display:none;}
-  .region-row{display:flex;justify-content:space-between;align-items:center;}
-  .region-name{font-size:11px;font-weight:500;}
-  .region-badge{font-family:'JetBrains Mono',monospace;font-size:9px;padding:2px 5px;border-radius:3px;font-weight:500;}
-  .badge-hi{background:rgba(255,107,53,0.2);color:#ff6b35;}
-  .badge-md{background:rgba(255,215,0,0.15);color:#ffd700;}
-  .badge-lo{background:rgba(0,212,255,0.1);color:var(--accent);}
-  .region-track{height:2px;background:rgba(255,255,255,0.07);border-radius:1px;margin-top:4px;}
-  .region-fill{height:100%;border-radius:1px;transition:width 0.4s ease-out;}
-  .region-func{font-size:9px;color:var(--text2);margin-top:2px;line-height:1.4;}
+  .region-name{font-size:11px;font-weight:500;margin-bottom:4px;display:block;}
+  .region-bar-wrap{height:4px;background:rgba(255,255,255,0.05);border-radius:2px;overflow:hidden;}
+  .region-bar{height:100%;background:var(--accent);width:0%;transition:width 0.4s;}
+  
+  #note-box{padding:15px;background:var(--bg3);border-top:1px solid var(--border);}
+  #note-title{font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;margin-bottom:6px;}
+  #note-text{font-size:11px;color:var(--text2);line-height:1.5;}
 
-  #note-box{padding:12px 14px;border-top:1px solid var(--border);background:rgba(0,0,0,0.25);}
-  #note-title{font-size:12px;font-weight:500;color:var(--accent);margin-bottom:5px;}
-  #note-text{font-size:10px;color:var(--text2);line-height:1.6;}
+  #view-toggles{position:absolute;top:70px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:10;}
+  .view-btn{padding:6px 12px;background:var(--panel);border:1px solid var(--border);color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:10px;border-radius:4px;cursor:pointer;}
+  .view-btn.active{color:var(--accent);border-color:var(--accent);}
 
-  #view-toggles{
-    position:absolute;top:72px;left:50%;transform:translateX(-50%);
-    display:flex;gap:5px;z-index:10;
-  }
-  .view-btn{
-    padding:4px 11px;border:1px solid var(--border);border-radius:4px;
-    background:rgba(10,20,30,0.85);color:var(--text2);font-family:'JetBrains Mono',monospace;
-    font-size:10px;cursor:pointer;transition:all 0.18s;letter-spacing:0.4px;
-  }
-  .view-btn.active{border-color:var(--accent);color:var(--accent);background:rgba(0,212,255,0.07);}
+  #legend{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:20px;background:var(--panel);padding:10px 20px;border-radius:8px;border:1px solid var(--border);}
+  .legend-item{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--text2);}
+  .legend-color{width:12px;height:12px;border-radius:2px;}
 
-  #data-badge{
-    position:absolute;bottom:20px;right:262px;
-    font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(0,212,255,0.35);
-    z-index:10;text-align:right;line-height:1.7;
-  }
-
-  #legend{
-    position:absolute;bottom:18px;left:50%;transform:translateX(-50%);
-    display:flex;align-items:center;gap:18px;
-    background:var(--panel);border:1px solid var(--border);border-radius:8px;
-    padding:9px 18px;z-index:10;
-  }
-  .legend-item{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text2);}
-  .legend-swatch{width:22px;height:5px;border-radius:3px;}
-
-  #tip{
-    position:absolute;background:var(--panel);border:1px solid var(--accent);
-    border-radius:6px;padding:7px 11px;pointer-events:none;
-    font-size:11px;z-index:20;display:none;max-width:170px;
-  }
-  #tip .tip-id{font-weight:500;color:var(--accent);}
-  #tip .tip-region{color:var(--text2);font-size:10px;margin-top:1px;}
-  #tip .tip-val{font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:4px;}
-
-  ::-webkit-scrollbar{width:3px;}
+  #tip{position:absolute;background:var(--panel);border:1px solid var(--accent);border-radius:4px;padding:8px;display:none;z-index:100;pointer-events:none;}
+  
+  ::-webkit-scrollbar{width:4px;}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
 </style>
 </head>
 <body>
 
-<div id="loading">
-  <div class="load-title"><span>Neuro</span>Viz</div>
-  <div class="load-sub">Loading real EEG recordings from PhysioNet</div>
-  <div class="load-bar-wrap"><div class="load-bar" id="load-bar"></div></div>
-  <div class="load-status" id="load-status">Fetching data…</div>
-  <div class="load-citation">
-    Dataset: EEG Motor Movement/Imagery Dataset · PhysioNet<br>
-    Schalk G et al. (2004) IEEE Trans Biomed Eng 51(6):1034–1043<br>
-    Goldberger AL et al. (2000) Circulation 101(23):e215–e220
-  </div>
-</div>
-
 <div id="canvas-container"><canvas id="main-canvas"></canvas></div>
 
 <div id="topbar">
   <div>
-    <div class="logo"><span>Neuro</span>Viz</div>
-    <div class="logo-sub">Real EEG · PhysioNet EEGMMIDB · 64-channel BCI2000</div>
-  </div>
-  <div class="controls-hint">
-    Left drag · Rotate &nbsp;|&nbsp; Right drag · Pan<br>
-    Scroll · Zoom &nbsp;|&nbsp; Hover electrode · Details
+    <div class="logo"><span>Neuro</span>Viz Pro</div>
+    <div class="logo-sub">Anatomical EEG MMIDB Analysis · 0.25x Slow-Motion</div>
   </div>
 </div>
 
 <div id="view-toggles">
-  <button class="view-btn active" onclick="setView('lateral',event)">Lateral</button>
-  <button class="view-btn" onclick="setView('top',event)">Superior</button>
-  <button class="view-btn" onclick="setView('front',event)">Frontal</button>
-  <button class="view-btn" onclick="setView('back',event)">Posterior</button>
+  <button class="view-btn active" onclick="setView('lateral',event)">LATERAL</button>
+  <button class="view-btn" onclick="setView('top',event)">SUPERIOR</button>
+  <button class="view-btn" onclick="setView('front',event)">FRONTAL</button>
 </div>
 
 <div id="left-panel">
   <div class="panel-section scrollable">
-    <div class="panel-label">Recordings</div>
+    <div class="panel-label">EEG Sessions</div>
     <div id="rec-list"></div>
   </div>
   <div id="playback">
-    <div class="panel-label">Playback</div>
-    <div class="time-display" id="time-display">0.00<span class="time-unit">s</span></div>
-    <div class="progress-bar" id="progress-bar" onclick="seekTo(event)">
-      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
-    </div>
+    <div class="time-display" id="time-display">0.00s</div>
     <div class="playback-controls">
-      <button class="btn primary" id="play-btn" onclick="togglePlay()">▶ Play</button>
-      <button class="btn" onclick="stepBack()" title="Back 0.5s">◀◀</button>
-      <button class="btn" onclick="stepForward()" title="Forward 0.5s">▶▶</button>
-      <span class="speed-info" id="speed-info">0.25×</span>
-      <button class="btn" onclick="cycleSpeed()" style="padding:4px 8px;font-size:10px;">Speed</button>
+      <button class="btn primary" id="play-btn" onclick="togglePlay()">▶ PLAY</button>
+      <span class="speed-badge">SPEED: 0.25×</span>
     </div>
-  </div>
-  <div id="wave-panel">
-    <div class="panel-label">Brainwave Bands</div>
-    <div id="wave-display"></div>
   </div>
 </div>
 
 <div id="right-panel">
-  <div class="filter-section">
-    <div class="panel-label">Brain Regions</div>
-    <div class="filter-chips" id="filter-chips"></div>
+  <div class="filter-chips" id="filter-chips">
+    <div class="filter-chip active" onclick="setFilter('All',event)">All</div>
+    <div class="filter-chip" onclick="setFilter('Frontal',event)">Frontal</div>
+    <div class="filter-chip" onclick="setFilter('Motor',event)">Motor</div>
+    <div class="filter-chip" onclick="setFilter('Visual',event)">Visual</div>
   </div>
   <div id="active-regions"></div>
   <div id="note-box">
-    <div id="note-title">Welcome</div>
-    <div id="note-text">Select a recording to explore real EEG data from the PhysioNet Motor Imagery dataset.</div>
+    <div id="note-title">Anatomical Guide</div>
+    <div id="note-text">Select a session to begin real-time neural mapping.</div>
   </div>
-</div>
-
-<div id="data-badge">
-  PhysioNet EEGMMIDB v1.0.0<br>
-  Real 64-ch EEG · 160 Hz · BCI2000
 </div>
 
 <div id="legend">
-  <div class="legend-item">
-    <div class="legend-swatch" style="background:linear-gradient(to right,#051833,#0055bb)"></div>Low
-  </div>
-  <div class="legend-item">
-    <div class="legend-swatch" style="background:linear-gradient(to right,#005522,#00cc44)"></div>Moderate
-  </div>
-  <div class="legend-item">
-    <div class="legend-swatch" style="background:linear-gradient(to right,#993300,#ff3300)"></div>High
-  </div>
+  <div class="legend-item"><div class="legend-color" style="background:#0055bb"></div> Low Alpha</div>
+  <div class="legend-item"><div class="legend-color" style="background:#ffd700"></div> Beta Active</div>
+  <div class="legend-item"><div class="legend-color" style="background:#ff3300"></div> High Gamma</div>
 </div>
 
-<div id="tip">
-  <div class="tip-id" id="tip-id"></div>
-  <div class="tip-region" id="tip-region"></div>
-  <div class="tip-val" id="tip-val"></div>
-</div>
+<div id="tip"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// ─────────────────────────────────────────────────────────────────────────────
-// CONFIG
-// ─────────────────────────────────────────────────────────────────────────────
-const EEG_DATA_URL = "https://raw.githubusercontent.com/CalvinCho9/neuroviz/main/eeg_data.json";
-const USE_FALLBACK = false;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ELECTRODE MAP
-// ─────────────────────────────────────────────────────────────────────────────
+// --- DATA & CONFIG ---
 const ELECTRODES = [
-  {id:'Fp1', pos:[-0.31, 0.92, 0.24], region:'Prefrontal L'},
-  {id:'Fp2', pos:[ 0.31, 0.92, 0.24], region:'Prefrontal R'},
-  {id:'F7',  pos:[-0.72, 0.48, 0.00], region:'Inferior Frontal L'},
-  {id:'F8',  pos:[ 0.72, 0.48, 0.00], region:'Inferior Frontal R'},
-  {id:'F3',  pos:[-0.50, 0.72, 0.46], region:'Middle Frontal L'},
-  {id:'F4',  pos:[ 0.50, 0.72, 0.46], region:'Middle Frontal R'},
-  {id:'Fz',  pos:[ 0.00, 0.72, 0.46], region:'Frontal Midline'},
-  {id:'C3',  pos:[-0.72, 0.00, 0.70], region:'Motor Cortex L'},
-  {id:'C4',  pos:[ 0.72, 0.00, 0.70], region:'Motor Cortex R'},
-  {id:'Cz',  pos:[ 0.00, 0.00, 1.00], region:'Central Midline'},
-  {id:'P3',  pos:[-0.50,-0.72, 0.46], region:'Parietal L'},
-  {id:'P4',  pos:[ 0.50,-0.72, 0.46], region:'Parietal R'},
-  {id:'Pz',  pos:[ 0.00,-0.60, 0.72], region:'Parietal Midline'},
-  {id:'P7',  pos:[-0.72,-0.48, 0.00], region:'Inferior Parietal L'},
-  {id:'P8',  pos:[ 0.72,-0.48, 0.00], region:'Inferior Parietal R'},
-  {id:'O1',  pos:[-0.31,-0.92, 0.20], region:'Visual Cortex L'},
-  {id:'O2',  pos:[ 0.31,-0.92, 0.20], region:'Visual Cortex R'},
-  {id:'Oz',  pos:[ 0.00,-1.00, 0.10], region:'Visual Cortex Central'},
-  {id:'T7',  pos:[-1.00, 0.00, 0.00], region:'Temporal L'},
-  {id:'T8',  pos:[ 1.00, 0.00, 0.00], region:'Temporal R'},
-  {id:'TP7', pos:[-0.85,-0.28,-0.08], region:'Temporoparietal L'},
-  {id:'TP8', pos:[ 0.85,-0.28,-0.08], region:'Temporoparietal R'},
-  {id:'FC1', pos:[-0.24, 0.40, 0.82], region:'Frontocentral L'},
-  {id:'FC2', pos:[ 0.24, 0.40, 0.82], region:'Frontocentral R'},
-  {id:'FC5', pos:[-0.68, 0.35, 0.44], region:'Frontocentral L'},
-  {id:'FC6', pos:[ 0.68, 0.35, 0.44], region:'Frontocentral R'},
-  {id:'CP1', pos:[-0.24,-0.40, 0.82], region:'Centroparietal L'},
-  {id:'CP2', pos:[ 0.24,-0.40, 0.82], region:'Centroparietal R'},
-  {id:'AF3', pos:[-0.42, 0.82, 0.36], region:'Anterior Frontal L'},
-  {id:'AF4', pos:[ 0.42, 0.82, 0.36], region:'Anterior Frontal R'},
+  {id:'Fp1', pos:[-0.31, 0.92, 0.24], region:'Prefrontal L', group:'Frontal'},
+  {id:'Fp2', pos:[ 0.31, 0.92, 0.24], region:'Prefrontal R', group:'Frontal'},
+  {id:'F3',  pos:[-0.50, 0.72, 0.46], region:'Middle Frontal L', group:'Frontal'},
+  {id:'F4',  pos:[ 0.50, 0.72, 0.46], region:'Middle Frontal R', group:'Frontal'},
+  {id:'C3',  pos:[-0.72, 0.00, 0.70], region:'Motor Cortex L', group:'Motor'},
+  {id:'C4',  pos:[ 0.72, 0.00, 0.70], region:'Motor Cortex R', group:'Motor'},
+  {id:'P3',  pos:[-0.50,-0.72, 0.46], region:'Parietal L', group:'Parietal'},
+  {id:'P4',  pos:[ 0.50,-0.72, 0.46], region:'Parietal R', group:'Parietal'},
+  {id:'O1',  pos:[-0.31,-0.92, 0.20], region:'Visual Cortex L', group:'Visual'},
+  {id:'O2',  pos:[ 0.31,-0.92, 0.20], region:'Visual Cortex R', group:'Visual'},
+  {id:'T7',  pos:[-1.00, 0.00, 0.00], region:'Temporal L', group:'Temporal'},
+  {id:'T8',  pos:[ 1.00, 0.00, 0.00], region:'Temporal R', group:'Temporal'}
 ];
 
-const REGION_FUNCTIONS = {
-  'Prefrontal L':       'Decision making, working memory',
-  'Prefrontal R':       'Decision making, working memory',
-  'Middle Frontal L':   'Executive function, attention',
-  'Middle Frontal R':   'Executive function, spatial processing',
-  'Frontal Midline':    'Motor planning, attention control',
-  'Inferior Frontal L': "Language production (Broca's area)",
-  'Inferior Frontal R': 'Prosody, emotional speech',
-  'Motor Cortex L':     'Controls right-body movement',
-  'Motor Cortex R':     'Controls left-body movement',
-  'Central Midline':    'Sensorimotor integration',
-  'Parietal L':         'Math cognition, spatial attention',
-  'Parietal R':         'Spatial awareness, navigation',
-  'Parietal Midline':   'Sensory integration',
-  'Inferior Parietal L':'Language, reading',
-  'Inferior Parietal R':'Face recognition, space',
-  'Visual Cortex L':    'Right visual field processing',
-  'Visual Cortex R':    'Left visual field processing',
-  'Visual Cortex Central':'Central vision',
-  'Temporal L':         'Language comprehension (Wernicke)',
-  'Temporal R':         'Melody, prosody, faces',
-  'Temporoparietal L':  'Language, reading',
-  'Temporoparietal R':  'Attention, social cognition',
-  'Frontocentral L':    'Motor preparation',
-  'Frontocentral R':    'Motor preparation',
-  'Centroparietal L':   'Somatosensory feedback',
-  'Centroparietal R':   'Somatosensory feedback',
-  'Anterior Frontal L': 'Planning, prospective memory',
-  'Anterior Frontal R': 'Planning, creative thinking',
-};
+const SCENARIOS = [
+  { label: "Resting: Eyes Closed", task: "Relaxed state with no visual input.", look: "Strong synchronized pulses in the Visual Cortex (O1, O2).", note: "Alpha rhythm (8-13Hz) emerges in posterior regions during visual rest." },
+  { label: "Imagine: Left Hand", task: "Squeezing a hypothetical left fist.", look: "Activation shift to the RIGHT Motor Cortex (C4 area).", note: "The brain is cross-wired: right hemisphere controls the left side of the body." },
+  { label: "Imagine: Right Hand", task: "Squeezing a hypothetical right fist.", look: "Activation shift to the LEFT Motor Cortex (C3 area).", note: "Mu-rhythm desynchronization occurs over the motor strip during imagery." },
+  { label: "Mental Calculation", task: "Solving arithmetic (e.g., 17 x 24).", look: "High frequency activity in Prefrontal and Parietal regions.", note: "Beta and Gamma waves dominate during executive cognitive load." }
+];
 
-// Region groups for filtering
-const REGION_GROUPS = {
-  'Frontal':   ['Prefrontal L','Prefrontal R','Middle Frontal L','Middle Frontal R','Frontal Midline','Inferior Frontal L','Inferior Frontal R','Anterior Frontal L','Anterior Frontal R','Frontocentral L','Frontocentral R'],
-  'Motor':     ['Motor Cortex L','Motor Cortex R','Central Midline'],
-  'Parietal':  ['Parietal L','Parietal R','Parietal Midline','Inferior Parietal L','Inferior Parietal R','Centroparietal L','Centroparietal R'],
-  'Temporal':  ['Temporal L','Temporal R','Temporoparietal L','Temporoparietal R'],
-  'Visual':    ['Visual Cortex L','Visual Cortex R','Visual Cortex Central'],
-};
-
-// All unique regions in a fixed display order (alphabetical)
 const ALL_REGIONS = [...new Set(ELECTRODES.map(e => e.region))].sort();
 
-let activeFilters = new Set(); // empty = show all
-
-const WAVE_BANDS = [
-  {key:'delta', name:'Delta', freq:'0.5–4 Hz',  color:'#8855ff', desc:'Deep sleep, unconscious processing'},
-  {key:'theta', name:'Theta', freq:'4–8 Hz',    color:'#3399ff', desc:'Memory encoding, drowsiness'},
-  {key:'alpha', name:'Alpha', freq:'8–13 Hz',   color:'#00cc88', desc:'Relaxed awareness, visual idle'},
-  {key:'beta',  name:'Beta',  freq:'13–30 Hz',  color:'#ffaa00', desc:'Active thinking, focus'},
-  {key:'gamma', name:'Gamma', freq:'30–45 Hz',  color:'#ff4444', desc:'Peak cognition, perception'},
-];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// REGION FILTER UI — stable list, chips just show/hide rows
-// ─────────────────────────────────────────────────────────────────────────────
-function buildFilterChips() {
-  const el = document.getElementById('filter-chips');
-  el.innerHTML = `<button class="filter-chip active" onclick="toggleFilter('all',this)">All</button>` +
-    Object.keys(REGION_GROUPS).map(g =>
-      `<button class="filter-chip" onclick="toggleFilter('${g}',this)">${g}</button>`
-    ).join('');
-}
-function toggleFilter(group, btn) {
-  if (group === 'all') {
-    activeFilters.clear();
-    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-    btn.classList.add('active');
-  } else {
-    // Deselect "All" chip
-    document.querySelector('.filter-chip').classList.remove('active');
-    if (activeFilters.has(group)) {
-      activeFilters.delete(group);
-      btn.classList.remove('active');
-      // If nothing selected, reactivate All
-      if (activeFilters.size === 0) document.querySelector('.filter-chip').classList.add('active');
-    } else {
-      activeFilters.add(group);
-      btn.classList.add('active');
-    }
-  }
-  applyRegionVisibility();
-}
-function isRegionVisible(regionName) {
-  if (activeFilters.size === 0) return true;
-  for (const [group, regions] of Object.entries(REGION_GROUPS)) {
-    if (activeFilters.has(group) && regions.includes(regionName)) return true;
-  }
-  return false;
-}
-function applyRegionVisibility() {
-  ALL_REGIONS.forEach(reg => {
-    const el = document.getElementById('reg-' + reg.replace(/\s+/g, '-'));
-    if (el) el.classList.toggle('hidden', !isRegionVisible(reg));
-  });
-}
-
-// Build the static region list once — never re-sort or re-create
-function buildRegionList() {
-  document.getElementById('active-regions').innerHTML = ALL_REGIONS.map(reg => {
-    const rid = 'reg-' + reg.replace(/\s+/g, '-');
-    return `<div class="region-item" id="${rid}">
-      <div class="region-row">
-        <span class="region-name">${reg}</span>
-        <span class="region-badge badge-lo" id="${rid}-badge">—</span>
-      </div>
-      <div class="region-track"><div class="region-fill" id="${rid}-bar" style="width:0%;background:var(--accent)"></div></div>
-      <div class="region-func">${REGION_FUNCTIONS[reg] || 'Neural processing'}</div>
-    </div>`;
-  }).join('');
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SYNTHETIC FALLBACK DATA
-// ─────────────────────────────────────────────────────────────────────────────
-function buildFallbackData() {
-  const SRATE = 20, DURATION = 12, N = SRATE * DURATION;
-  const sn = (t,f,a,p=0) => a * Math.sin(2*Math.PI*f*t+p);
-  const nr = a => (Math.random()-0.5)*a;
-  const scenarios = [
-    { label:'Baseline: Eyes Open',
-      task:'Subject is awake and relaxed with eyes open, looking at a fixation point. This is the control condition — the brain\'s "idle" state while still processing visual input.',
-      lookfor:'Low overall activity. Visual cortex is mildly active from processing light. Alpha rhythm is suppressed compared to eyes-closed.',
-      note:'Eyes-open rest: alpha is suppressed as the visual cortex processes incoming light.',
-      gen:(id,reg,t)=>{ const isO=reg.includes('Visual')||reg.includes('Parietal'); return Math.max(0,Math.min(1,isO?0.2+sn(t,20,0.1)+nr(0.07):0.15+sn(t,10,0.05)+nr(0.05))); },
-      bands:t=>({delta:0.1,theta:0.15,alpha:0.2+sn(t,0.3,0.08),beta:0.35+sn(t,0.2,0.07),gamma:0.2}) },
-    { label:'Baseline: Eyes Closed',
-      task:'Subject closes their eyes and relaxes. Without visual input, the brain\'s visual cortex starts producing strong alpha waves — the most famous EEG pattern, discovered in 1929.',
-      lookfor:'Bright activity over the back of the head (visual cortex). Alpha band shoots up to ~80%. Compare with eyes-open to see the difference.',
-      note:'Eyes closed: posterior alpha rhythm dominates — the most robust EEG finding, discovered by Hans Berger in 1929.',
-      gen:(id,reg,t)=>{ const isO=reg.includes('Visual')||reg.includes('Parietal'); return Math.max(0,Math.min(1,isO?0.6+sn(t,10,0.28)+nr(0.05):0.2+sn(t,10,0.1)+nr(0.04))); },
-      bands:t=>({delta:0.1,theta:0.15,alpha:0.82+sn(t,0.25,0.1),beta:0.12,gamma:0.05}) },
-    { label:'Imagine: Left Hand',
-      task:'Subject imagines squeezing their left fist. Even though no actual movement occurs, the RIGHT side of the motor cortex activates — the brain is cross-wired.',
-      lookfor:'Right motor cortex (C4 electrode) lights up. Left side stays quiet. This asymmetry is how brain-computer interfaces detect imagined movement.',
-      note:'Right motor cortex (C4) desynchronises — contralateral to the imagined hand. This ERD pattern drives BCI prosthetics.',
-      gen:(id,reg,t)=>{ const im=0.5+0.5*Math.abs(Math.sin(t*0.4)); const isRM=reg.includes('Motor Cortex R')||id==='C4'||id==='FC2'||id==='CP2'; return Math.max(0,Math.min(1,isRM?(0.65+sn(t,20,0.15)+nr(0.06))*im:0.15+nr(0.04))); },
-      bands:t=>({delta:0.08,theta:0.2,alpha:0.25,beta:0.72+sn(t,0.4,0.15),gamma:0.3}) },
-    { label:'Imagine: Right Hand',
-      task:'Subject imagines squeezing their right fist. The LEFT motor cortex activates this time — the mirror image of the left-hand condition.',
-      lookfor:'Left motor cortex (C3 electrode) lights up. Compare with "Left Hand" to see how the active hemisphere flips. BCI decoders use this flip to classify intent.',
-      note:'Left motor cortex (C3) desynchronises — contralateral to the right hand.',
-      gen:(id,reg,t)=>{ const im=0.5+0.5*Math.abs(Math.sin(t*0.4)); const isLM=reg.includes('Motor Cortex L')||id==='C3'||id==='FC1'||id==='CP1'||id==='FC5'; return Math.max(0,Math.min(1,isLM?(0.65+sn(t,20,0.15)+nr(0.06))*im:0.15+nr(0.04))); },
-      bands:t=>({delta:0.08,theta:0.2,alpha:0.25,beta:0.72+sn(t,0.4,0.15),gamma:0.3}) },
-    { label:'Imagine: Both Hands',
-      task:'Subject imagines squeezing both fists simultaneously. Both hemispheres of the motor cortex now activate together, creating a symmetrical pattern.',
-      lookfor:'Both left and right motor cortex light up equally. Frontocentral regions also activate. Broad beta suppression across the top of the brain.',
-      note:'Bilateral motor imagery activates both hemispheres symmetrically with broad beta suppression.',
-      gen:(id,reg,t)=>{ const im=0.5+0.5*Math.abs(Math.sin(t*0.35)); const isM=reg.includes('Motor')||reg.includes('Frontocentral')||id==='Cz'; return Math.max(0,Math.min(1,isM?(0.6+sn(t,20,0.14)+nr(0.07))*im:0.15+nr(0.04))); },
-      bands:t=>({delta:0.08,theta:0.22,alpha:0.2,beta:0.78+sn(t,0.35,0.12),gamma:0.32}) },
-    { label:'Imagine: Both Feet',
-      task:'Subject imagines curling their toes. Foot areas map to the very top center of the brain (the "motor homunculus"), so activity concentrates at the midline vertex.',
-      lookfor:'Activity is concentrated at Cz (top center). Unlike hand imagery which is lateral, foot imagery is medial. This spatial difference enables multi-axis BCI control.',
-      note:'Foot imagery activates medial motor cortex near Cz — the homunculus maps feet to the top of the motor strip.',
-      gen:(id,reg,t)=>{ const im=0.5+0.5*Math.abs(Math.sin(t*0.38)); const isCtr=id==='Cz'||id==='Pz'||id==='CP1'||id==='CP2'; return Math.max(0,Math.min(1,isCtr?(0.7+sn(t,20,0.15)+nr(0.05))*im:0.12+nr(0.04))); },
-      bands:t=>({delta:0.08,theta:0.2,alpha:0.22,beta:0.74+sn(t,0.38,0.12),gamma:0.28}) },
-  ];
-  return scenarios.map((sc, i) => {
-    const channels = {}, times = [];
-    for (let k=0; k<N; k++) {
-      const t = k/SRATE; times.push(parseFloat(t.toFixed(3)));
-      ELECTRODES.forEach(el => {
-        if (!channels[el.id]) channels[el.id] = [];
-        channels[el.id].push(parseFloat(sc.gen(el.id, el.region, t).toFixed(3)));
-      });
-    }
-    channels._times = times; channels._srate = SRATE;
-    const bands = {}; ['delta','theta','alpha','beta','gamma'].forEach(bk => { bands[bk] = []; });
-    for (let k=0; k<N; k++) {
-      const t = k/SRATE, bv = sc.bands(t);
-      ['delta','theta','alpha','beta','gamma'].forEach(bk => bands[bk].push(parseFloat(Math.max(0,Math.min(1,bv[bk]||0)).toFixed(3))));
-    }
-    return { id:i, label:sc.label, task:sc.task, note:sc.note, lookfor:sc.lookfor||'', subject:`S00${i+1}`, run:`R0${i*2+1}`,
-             channels, bands, duration:DURATION, srate:SRATE, citation:'' };
-  });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// THREE.JS SETUP
-// ─────────────────────────────────────────────────────────────────────────────
+// --- THREE.JS SETUP ---
 const canvas = document.getElementById('main-canvas');
 const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.setClearColor(0x060b11,1);
-renderer.shadowMap.enabled = true;
-
+renderer.setClearColor(0x060b11, 1);
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(42, canvas.clientWidth/canvas.clientHeight, 0.1, 100);
+const camera = new THREE.PerspectiveCamera(40, window.innerWidth/window.innerHeight, 0.1, 100);
+camera.position.set(0, 0, 4);
 
-function resize() {
-  renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
-  camera.aspect = canvas.clientWidth / canvas.clientHeight;
-  camera.updateProjectionMatrix();
-}
-window.addEventListener('resize', resize); resize();
-
-// Orbit controls
-let drag=false, rightDrag=false, lastMX=0, lastMY=0;
-let sph={theta:0, phi:Math.PI/2}, panOff=new THREE.Vector3(), zoom=3.8;
-const TARGET=new THREE.Vector3(0,0.05,0);
-
-function updateCam() {
-  const x=zoom*Math.sin(sph.phi)*Math.sin(sph.theta);
-  const y=zoom*Math.cos(sph.phi);
-  const z=zoom*Math.sin(sph.phi)*Math.cos(sph.theta);
-  camera.position.set(x+TARGET.x+panOff.x, y+TARGET.y+panOff.y, z+TARGET.z+panOff.z);
-  camera.lookAt(TARGET.x+panOff.x, TARGET.y+panOff.y, TARGET.z+panOff.z);
-}
-canvas.addEventListener('mousedown',e=>{drag=true;rightDrag=e.button===2;lastMX=e.clientX;lastMY=e.clientY;});
-canvas.addEventListener('contextmenu',e=>e.preventDefault());
-window.addEventListener('mousemove',e=>{
-  if(!drag)return;
-  const dx=e.clientX-lastMX, dy=e.clientY-lastMY;
-  if(rightDrag){panOff.x-=dx*0.003;panOff.y+=dy*0.003;}
-  else{sph.theta-=dx*0.008;sph.phi=Math.max(0.1,Math.min(Math.PI-0.1,sph.phi+dy*0.008));}
-  lastMX=e.clientX;lastMY=e.clientY;updateCam();
-});
-window.addEventListener('mouseup',()=>drag=false);
-canvas.addEventListener('wheel',e=>{zoom=Math.max(1.8,Math.min(8,zoom+e.deltaY*0.005));updateCam();},{passive:true});
-updateCam();
-
-// Lighting — more cinematic
-const ambLight = new THREE.AmbientLight(0x223344, 0.6);
-scene.add(ambLight);
-const keyLight = new THREE.DirectionalLight(0xaaddff, 0.7);
-keyLight.position.set(3, 4, 2); scene.add(keyLight);
-const fillLight = new THREE.DirectionalLight(0x445566, 0.3);
-fillLight.position.set(-3, 1, -2); scene.add(fillLight);
-const rimLight = new THREE.DirectionalLight(0x00aaff, 0.2);
-rimLight.position.set(0, -2, -3); scene.add(rimLight);
-
-const brainGroup = new THREE.Group();
-scene.add(brainGroup);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// REALISTIC BRAIN GEOMETRY
-// ─────────────────────────────────────────────────────────────────────────────
-
-// Improved noise — multi-octave for cortical surface detail
-function corticalNoise(x, y, z) {
-  const n1 = Math.sin(x*3.7+y*2.3)*Math.cos(y*4.8+z*2.9)*Math.sin(z*3.2+x*1.5);
-  const n2 = Math.sin(x*7.9+z*5.1)*Math.cos(y*8.4+x*3.7)*Math.sin(z*6.8+y*4.9);
-  const n3 = Math.sin(x*14.2+y*11.7)*Math.cos(y*15.3+z*10.8)*Math.sin(z*13.1+x*9.4);
-  const n4 = Math.sin(x*22.5+z*18.3)*Math.cos(y*20.1+x*16.9);
-  return 0.42*n1 + 0.28*n2 + 0.18*n3 + 0.12*n4;
-}
-
-// Gyri pattern — creates ridges and sulci across the surface
-function gyriPattern(x, y, z) {
-  const g1 = Math.sin(x*6.0 + z*2.0) * Math.cos(y*5.5 + x*1.5);
-  const g2 = Math.sin(y*7.0 + x*3.0) * Math.cos(z*6.5 + y*2.0);
-  const g3 = Math.cos(x*4.5 + y*4.5 + z*4.5);
-  return 0.5*g1 + 0.3*g2 + 0.2*g3;
-}
-
-// Build the cerebrum — two hemispheres with proper anatomical shape
-function buildCerebrum() {
-  const geo = new THREE.SphereGeometry(1.0, 160, 120);
+function buildAnatomicalBrain() {
+  const brainGroup = new THREE.Group();
+  
+  // Cerebrum: Improved Anatomical Shape
+  const geo = new THREE.SphereGeometry(1, 64, 64);
   const pos = geo.attributes.position;
-
   for (let i = 0; i < pos.count; i++) {
     let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
-    const r = Math.sqrt(x*x + y*y + z*z) || 1;
-    let nx = x/r, ny = y/r, nz = z/r;
-
-    // Base anatomical shaping
-    let sx = 1.0, sy = 1.0, sz = 1.0;
-
-    // Wider laterally, slightly compressed top-to-bottom
-    sx = 1.08;
-    sy = 0.88; // compressed vertically
-    sz = 0.96;
-
-    // Frontal lobe bulge — extends forward and slightly upward
-    const frontalBulge = 0.12 * Math.exp(-Math.pow(nz + 0.7, 2) / 0.15) * Math.exp(-Math.pow(ny - 0.3, 2) / 0.5);
-    // Occipital pole — tapers backward
-    const occipitalTaper = -0.06 * Math.exp(-Math.pow(nz - 0.85, 2) / 0.1);
-    // Temporal lobe — lateral bulge lower down
-    const temporalBulge = 0.10 * Math.exp(-Math.pow(ny + 0.3, 2) / 0.12) * Math.exp(-Math.pow(nz, 2) / 0.4) * (Math.abs(nx) > 0.3 ? 1 : 0);
-    // Flatten the bottom (base of brain)
-    const baseFlatten = ny < -0.5 ? -0.15 * Math.pow(Math.abs(ny + 0.5), 1.5) : 0;
-
-    // Interhemispheric fissure — deep groove along the midline top
-    const fissureDepth = Math.abs(nx) < 0.08 ? -0.09 * (1.0 - Math.pow(nx / 0.08, 2)) * Math.max(0, ny + 0.1) : 0;
-
-    // Central sulcus groove (runs roughly coronal across the top)
-    const centralSulcus = -0.035 * Math.exp(-Math.pow(nz + 0.05, 2) / 0.012) * Math.max(0, ny + 0.1);
-
-    // Lateral (Sylvian) fissure
-    const sylvianL = -0.03 * Math.exp(-Math.pow(ny + 0.05, 2) / 0.015) * Math.exp(-Math.pow(nz + 0.1, 2) / 0.3) * (nx < -0.3 ? 1 : 0);
-    const sylvianR = -0.03 * Math.exp(-Math.pow(ny + 0.05, 2) / 0.015) * Math.exp(-Math.pow(nz + 0.1, 2) / 0.3) * (nx > 0.3 ? 1 : 0);
-
-    // Cortical folding — gyri and sulci surface detail
-    const fold = corticalNoise(x*2.8, y*2.8, z*2.8) * 0.038;
-    const gyri = gyriPattern(x*1.8, y*1.8, z*1.8) * 0.018;
-    // Fine wrinkle detail
-    const fine = corticalNoise(x*5.5, y*5.5, z*5.5) * 0.012;
-
-    const totalDeform = frontalBulge + occipitalTaper + temporalBulge + baseFlatten
-                      + fissureDepth + centralSulcus + sylvianL + sylvianR
-                      + fold + gyri + fine;
-
-    pos.setXYZ(i,
-      x * sx + nx * totalDeform,
-      y * sy + ny * totalDeform + ny * baseFlatten,
-      z * sz + nz * totalDeform
-    );
+    const r = Math.sqrt(x*x + y*y + z*z);
+    
+    // Frontal Lobe bulge & Occipital taper
+    const frontal = 0.15 * Math.exp(-Math.pow(z + 0.8, 2) / 0.2);
+    const temporal = 0.08 * Math.exp(-Math.pow(y + 0.4, 2) / 0.1) * (Math.abs(x) > 0.5 ? 1 : 0);
+    const fissure = Math.abs(x) < 0.06 ? -0.05 : 0; // The midline split
+    
+    const deform = frontal + temporal + fissure;
+    pos.setXYZ(i, x * 1.1 + (x/r)*deform, y * 0.85 + (y/r)*deform, z * 0.95 + (z/r)*deform);
   }
-
   geo.computeVertexNormals();
+  const mat = new THREE.MeshPhongMaterial({color: 0x1a2b3c, transparent: true, opacity: 0.8, shininess: 30});
+  const cerebrum = new THREE.Mesh(geo, mat);
+  brainGroup.add(cerebrum);
 
-  // Custom shader material for the brain — gives a subsurface-scatter look
-  const mat = new THREE.MeshPhongMaterial({
-    color: 0x1c3a5e,
-    emissive: 0x06111e,
-    specular: 0x3a6088,
-    shininess: 35,
-    transparent: true,
-    opacity: 0.78,
+  // Add Sulci Lines (The "Wrinkles")
+  const sulcusMat = new THREE.LineBasicMaterial({color: 0x000000, opacity: 0.3, transparent: true});
+  const fissureLine = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0.8, -0.9), new THREE.Vector3(0, 0.8, 0.9)]);
+  brainGroup.add(new THREE.Line(fissureLine, sulcusMat));
+
+  return brainGroup;
+}
+
+const brain = buildAnatomicalBrain();
+scene.add(brain);
+scene.add(new THREE.AmbientLight(0x445566, 0.8));
+const light = new THREE.PointLight(0x00d4ff, 1);
+light.position.set(5, 5, 5);
+scene.add(light);
+
+// --- ELECTRODES ---
+const eMeshes = ELECTRODES.map(el => {
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.04, 16, 16), new THREE.MeshPhongMaterial({color: 0xffffff, emissive: 0x004466}));
+  mesh.position.set(el.pos[0] * 1.1, el.pos[2] * 0.85, -el.pos[1] * 0.95);
+  brain.add(mesh);
+  return mesh;
+});
+
+// --- UI LOGIC ---
+let playing = false;
+let playTime = 0;
+let currentRecIdx = 0;
+
+function buildUI() {
+  const list = document.getElementById('rec-list');
+  SCENARIOS.forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = `rec-card ${i === 0 ? 'active' : ''}`;
+    card.innerHTML = `
+      <div class="rec-label">${s.label}</div>
+      <div class="rec-task">${s.task}</div>
+      <div class="rec-look"><b>WATCH:</b> ${s.look}</div>
+    `;
+    card.onclick = () => {
+      document.querySelectorAll('.rec-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      currentRecIdx = i;
+      playTime = 0;
+      document.getElementById('note-text').innerText = s.note;
+    };
+    list.appendChild(card);
   });
 
-  return new THREE.Mesh(geo, mat);
+  const regionsDiv = document.getElementById('active-regions');
+  ALL_REGIONS.forEach(reg => {
+    const item = document.createElement('div');
+    item.className = 'region-item';
+    item.dataset.group = ELECTRODES.find(e => e.region === reg).group;
+    item.id = `reg-${reg.replace(/\s/g, '')}`;
+    item.innerHTML = `
+      <span class="region-name">${reg}</span>
+      <div class="region-bar-wrap"><div class="region-bar" id="bar-${reg.replace(/\s/g, '')}"></div></div>
+    `;
+    regionsDiv.appendChild(item);
+  });
 }
 
-const brainMesh = buildCerebrum();
-brainGroup.add(brainMesh);
-
-// Major sulci lines — drawn as thin tubes for visual clarity
-const sulciMat = new THREE.MeshBasicMaterial({color: 0x020a14, transparent: true, opacity: 0.7});
-
-function addSulcus(pts, radius) {
-  const c = new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(p[0], p[1], p[2])));
-  const tube = new THREE.Mesh(new THREE.TubeGeometry(c, 32, radius || 0.007, 5, false), sulciMat);
-  brainGroup.add(tube);
-}
-
-// Interhemispheric fissure (top midline)
-addSulcus([[0, 0.85, -0.65], [0, 0.92, -0.35], [0, 0.90, 0.0], [0, 0.82, 0.35], [0, 0.65, 0.60], [0, 0.35, 0.78], [0, 0.0, 0.86], [0, -0.35, 0.78], [0, -0.60, 0.58]], 0.01);
-// Central sulcus L
-addSulcus([[-0.15, 0.75, -0.08], [-0.32, 0.70, 0.0], [-0.52, 0.55, 0.08], [-0.68, 0.35, 0.12], [-0.78, 0.15, 0.08]], 0.006);
-// Central sulcus R
-addSulcus([[0.15, 0.75, -0.08], [0.32, 0.70, 0.0], [0.52, 0.55, 0.08], [0.68, 0.35, 0.12], [0.78, 0.15, 0.08]], 0.006);
-// Sylvian fissure L
-addSulcus([[-0.40, -0.10, -0.52], [-0.62, -0.08, -0.30], [-0.80, -0.04, -0.05], [-0.88, 0.0, 0.15], [-0.78, 0.02, 0.35]], 0.006);
-// Sylvian fissure R
-addSulcus([[0.40, -0.10, -0.52], [0.62, -0.08, -0.30], [0.80, -0.04, -0.05], [0.88, 0.0, 0.15], [0.78, 0.02, 0.35]], 0.006);
-// Parieto-occipital sulcus
-addSulcus([[-0.08, 0.55, 0.55], [-0.15, 0.40, 0.68], [-0.22, 0.20, 0.72]], 0.005);
-addSulcus([[0.08, 0.55, 0.55], [0.15, 0.40, 0.68], [0.22, 0.20, 0.72]], 0.005);
-// Superior temporal sulcus L
-addSulcus([[-0.55, -0.18, -0.35], [-0.72, -0.15, -0.10], [-0.80, -0.10, 0.10], [-0.72, -0.06, 0.30]], 0.005);
-// Superior temporal sulcus R
-addSulcus([[0.55, -0.18, -0.35], [0.72, -0.15, -0.10], [0.80, -0.10, 0.10], [0.72, -0.06, 0.30]], 0.005);
-// Precentral sulcus L
-addSulcus([[-0.12, 0.80, -0.18], [-0.28, 0.76, -0.12], [-0.45, 0.62, -0.04], [-0.60, 0.45, 0.0]], 0.005);
-// Precentral sulcus R
-addSulcus([[0.12, 0.80, -0.18], [0.28, 0.76, -0.12], [0.45, 0.62, -0.04], [0.60, 0.45, 0.0]], 0.005);
-// Postcentral sulcus L
-addSulcus([[-0.18, 0.68, 0.05], [-0.38, 0.62, 0.14], [-0.58, 0.48, 0.18], [-0.72, 0.30, 0.18]], 0.004);
-// Postcentral sulcus R
-addSulcus([[0.18, 0.68, 0.05], [0.38, 0.62, 0.14], [0.58, 0.48, 0.18], [0.72, 0.30, 0.18]], 0.004);
-
-// Cerebellum
-const cGeo = new THREE.SphereGeometry(0.38, 56, 36);
-const cp = cGeo.attributes.position;
-for (let i = 0; i < cp.count; i++) {
-  let cx = cp.getX(i), cy = cp.getY(i), cz = cp.getZ(i);
-  // Wider, flatter, with horizontal folia ridges
-  const fold = 0.018 * Math.cos(cy * 22 + cz * 3);
-  const flatY = cy * 0.55;
-  cp.setXYZ(i, cx * 1.45 + fold, flatY, cz * 1.1);
-}
-cGeo.computeVertexNormals();
-const cMat = new THREE.MeshPhongMaterial({color: 0x15283e, emissive: 0x040c16, transparent: true, opacity: 0.68, shininess: 18});
-const cMesh = new THREE.Mesh(cGeo, cMat);
-cMesh.position.set(0, -0.62, 0.52);
-brainGroup.add(cMesh);
-
-// Brainstem
-const bsGeo = new THREE.CylinderGeometry(0.10, 0.08, 0.42, 14);
-const bsMat = new THREE.MeshPhongMaterial({color: 0x122030, shininess: 18});
-const bsMesh = new THREE.Mesh(bsGeo, bsMat);
-bsMesh.position.set(0, -0.86, 0.12);
-bsMesh.rotation.x = 0.2;
-brainGroup.add(bsMesh);
-
-// ─────────────────────────────────────────────────────────────────────────────
-// ELECTRODES ON BRAIN SURFACE
-// ─────────────────────────────────────────────────────────────────────────────
-const SC = 0.94;
-const eGeo = new THREE.SphereGeometry(0.025, 14, 10);
-const eMats = ELECTRODES.map(() => new THREE.MeshPhongMaterial({color:0xffffff, emissive:0x446688, shininess:80, transparent:true, opacity:0.92}));
-const eMeshes = ELECTRODES.map((el, i) => {
-  const m = new THREE.Mesh(eGeo, eMats[i]);
-  m.position.set(el.pos[0]*SC*1.08, el.pos[2]*SC*0.88, -el.pos[1]*SC*0.96);
-  m.userData = {index:i, id:el.id, region:el.region};
-  brainGroup.add(m); return m;
-});
-
-// Activity glow spheres
-const aGeo = new THREE.SphereGeometry(0.08, 12, 8);
-const aMats = ELECTRODES.map(() => new THREE.MeshBasicMaterial({color:0x003399, transparent:true, opacity:0}));
-const aMeshes = ELECTRODES.map((el, i) => {
-  const m = new THREE.Mesh(aGeo, aMats[i]);
-  m.position.copy(eMeshes[i].position); brainGroup.add(m); return m;
-});
-
-// Halo
-const hGeo = new THREE.SphereGeometry(0.048, 14, 10);
-const hMats = ELECTRODES.map(() => new THREE.MeshBasicMaterial({color:0x00aaff, transparent:true, opacity:0, side:THREE.BackSide}));
-const hMeshes = ELECTRODES.map((el, i) => {
-  const m = new THREE.Mesh(hGeo, hMats[i]);
-  m.position.copy(eMeshes[i].position); brainGroup.add(m); return m;
-});
-
-// Connection arcs
-const CONN_PAIRS = [
-  ['Fp1','Fp2'],['F3','F4'],['C3','C4'],['P3','P4'],
-  ['F3','C3'],['F4','C4'],['C3','P3'],['C4','P4'],
-  ['Fz','Cz'],['Cz','Pz'],['FC1','FC2'],['FC1','C3'],['FC2','C4'],
-  ['P3','Pz'],['P4','Pz'],
-];
-
-function ePos(id) {
-  const e = ELECTRODES.find(e => e.id === id);
-  return e ? new THREE.Vector3(e.pos[0]*SC*1.08, e.pos[2]*SC*0.88, -e.pos[1]*SC*0.96) : null;
-}
-
-const connections = CONN_PAIRS.map(([a, b]) => {
-  const pa = ePos(a), pb = ePos(b); if (!pa || !pb) return null;
-  const mid = pa.clone().add(pb).multiplyScalar(0.5);
-  const push = mid.clone().normalize().multiplyScalar(mid.length() + 0.12);
-  const curve = new THREE.CatmullRomCurve3([pa, push, pb]);
-  const mat = new THREE.MeshBasicMaterial({color: 0x00d4ff, transparent: true, opacity: 0});
-  const mesh = new THREE.Mesh(new THREE.TubeGeometry(curve, 20, 0.003, 5, false), mat);
-  brainGroup.add(mesh);
-  const ai = ELECTRODES.findIndex(e => e.id === a), bi = ELECTRODES.findIndex(e => e.id === b);
-  return {mesh, mat, curve, ai, bi, pulseT: Math.random()};
-}).filter(Boolean);
-
-const pulseMeshes = connections.map(() => {
-  const m = new THREE.Mesh(
-    new THREE.SphereGeometry(0.012, 8, 6),
-    new THREE.MeshBasicMaterial({color: 0xffffff, transparent: true, opacity: 0})
-  );
-  brainGroup.add(m); return m;
-});
-
-const currentAct = new Float32Array(ELECTRODES.length);
-
-function actColor(v) {
-  const ramp = [[0.03,0.07,0.25],[0.0,0.28,0.75],[0.0,0.72,0.5],[0.35,0.88,0.1],[0.95,0.62,0.0],[0.95,0.1,0.0]];
-  const t = Math.max(0, Math.min(1, v)) * (ramp.length - 1);
-  const idx = Math.floor(t), f = t - idx;
-  const a = ramp[Math.min(idx, ramp.length-1)], b = ramp[Math.min(idx+1, ramp.length-1)];
-  return new THREE.Color(a[0]+(b[0]-a[0])*f, a[1]+(b[1]-a[1])*f, a[2]+(b[2]-a[2])*f);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PLAYBACK STATE — default 0.25× speed
-// ─────────────────────────────────────────────────────────────────────────────
-let recordings = [], currentRec = null;
-let playTime = 0, playing = false, playSpeed = 0.25, speedIdx = 0;
-let lastTS = null, frameCount = 0;
-const SPEEDS = [0.25, 0.5, 1, 2];
-
-function loadRecording(idx) {
-  currentRec = recordings[idx];
-  playTime = 0; playing = true;
-  document.getElementById('play-btn').textContent = '⏸ Pause';
-  document.querySelectorAll('.rec-card').forEach((c, i) => c.classList.toggle('active', i === idx));
-  document.getElementById('note-title').textContent = currentRec.label;
-  document.getElementById('note-text').innerHTML = currentRec.lookfor
-    ? `<span style="color:var(--accent);font-weight:500;">What to watch:</span> ${currentRec.lookfor}`
-    : (currentRec.note || currentRec.task);
-  updateUI();
+function setFilter(group, e) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  e.target.classList.add('active');
+  document.querySelectorAll('.region-item').forEach(item => {
+    item.classList.toggle('hidden', group !== 'All' && item.dataset.group !== group);
+  });
 }
 
 function togglePlay() {
-  if (!currentRec) { loadRecording(0); return; }
   playing = !playing;
-  document.getElementById('play-btn').textContent = playing ? '⏸ Pause' : '▶ Play';
-}
-function stepBack() { if (currentRec) { playTime = Math.max(0, playTime - 0.5); updateFrame(); } }
-function stepForward() { if (currentRec) { playTime = (playTime + 0.5) % currentRec.duration; updateFrame(); } }
-function cycleSpeed() {
-  speedIdx = (speedIdx + 1) % SPEEDS.length;
-  playSpeed = SPEEDS[speedIdx];
-  document.getElementById('speed-info').textContent = playSpeed + '×';
-}
-function seekTo(e) {
-  if (!currentRec) return;
-  const bar = document.getElementById('progress-bar');
-  const r = bar.getBoundingClientRect();
-  playTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * currentRec.duration;
-  updateFrame();
-}
-function setView(v, e) {
-  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-  if (e && e.target) e.target.classList.add('active');
-  const views = {lateral:[3.8,Math.PI/2,0], top:[3.8,0.12,0], front:[3.8,Math.PI/2,0], back:[3.8,Math.PI/2,Math.PI]};
-  const [z, phi, theta] = views[v];
-  zoom = z; sph.phi = phi; sph.theta = theta; updateCam();
+  document.getElementById('play-btn').innerText = playing ? "⏸ PAUSE" : "▶ PLAY";
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// UI UPDATES
-// ─────────────────────────────────────────────────────────────────────────────
-function buildRecList() {
-  document.getElementById('rec-list').innerHTML = recordings.map((r, i) => `
-    <div class="rec-card" onclick="loadRecording(${i})">
-      <div class="rec-num">${i+1} of ${recordings.length}</div>
-      <div class="rec-label">${r.label}</div>
-      <div class="rec-task">${r.task}</div>
-      ${r.lookfor ? `<div class="rec-look"><b>Look for:</b> ${r.lookfor}</div>` : ''}
-    </div>`).join('');
-}
-
-function getFrameIdx() {
-  if (!currentRec) return 0;
-  return Math.min(Math.floor(playTime * currentRec.srate), currentRec.channels._times.length - 1);
-}
-
-function updateUI() {
-  if (!currentRec) return;
-  document.getElementById('progress-fill').style.width = (playTime / currentRec.duration * 100) + '%';
-  document.getElementById('time-display').innerHTML = `${playTime.toFixed(2)}<span class="time-unit">s</span>`;
-}
-
-function updateWaves(fi) {
-  if (!currentRec) return;
-  document.getElementById('wave-display').innerHTML = WAVE_BANDS.map(wb => {
-    const v = Math.max(0, Math.min(1, (currentRec.bands[wb.key] || [])[fi] || 0));
-    const pct = Math.round(v * 100);
-    return `<div class="wave-row">
-      <div class="wave-dot" style="background:${wb.color}"></div>
-      <div class="wave-name" style="color:${wb.color}">${wb.name}</div>
-      <div class="wave-freq">${wb.freq}</div>
-      <div class="wave-track"><div class="wave-fill" style="width:${pct}%;background:${wb.color}"></div></div>
-      <div class="wave-pct" style="color:${wb.color}">${pct}%</div>
-    </div>
-    <div class="wave-desc">${wb.desc}</div>`;
-  }).join('');
-}
-
-function updateRegions(fi) {
-  if (!currentRec) return;
-  const regionMax = {};
-  ELECTRODES.forEach(el => {
-    const v = (currentRec.channels[el.id] || [])[fi] || 0;
-    if (!regionMax[el.region] || v > regionMax[el.region]) regionMax[el.region] = v;
-  });
-  // Update stable DOM elements in-place — no re-sorting, no re-creating
-  ALL_REGIONS.forEach(reg => {
-    const rid = 'reg-' + reg.replace(/\s+/g, '-');
-    const bar = document.getElementById(rid + '-bar');
-    const badge = document.getElementById(rid + '-badge');
-    if (!bar || !badge) return;
-    const v = regionMax[reg] || 0;
-    const pct = Math.round(v * 100);
-    bar.style.width = pct + '%';
-    bar.style.background = v > 0.65 ? '#ff6b35' : v > 0.35 ? '#ffd700' : '#00d4ff';
-    if (v > 0.65) { badge.className = 'region-badge badge-hi'; badge.textContent = pct + '%'; }
-    else if (v > 0.35) { badge.className = 'region-badge badge-md'; badge.textContent = pct + '%'; }
-    else { badge.className = 'region-badge badge-lo'; badge.textContent = pct + '%'; }
-  });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 3D FRAME UPDATE
-// ─────────────────────────────────────────────────────────────────────────────
-function updateFrame() {
-  if (!currentRec) return;
-  const fi = getFrameIdx();
-  updateUI(); updateWaves(fi); updateRegions(fi);
-
-  ELECTRODES.forEach((el, i) => {
-    const v = Math.max(0, Math.min(1, (currentRec.channels[el.id] || [])[fi] || 0));
-    currentAct[i] = v;
-    const col = actColor(v);
-    aMats[i].color.copy(col);
-    aMats[i].opacity = v * 0.55;
-    aMeshes[i].scale.setScalar(0.4 + v * 1.6);
-    hMats[i].color.copy(col);
-    hMats[i].opacity = v > 0.45 ? (v - 0.45) * 0.5 : 0;
-    const br = 0.25 + v * 0.75;
-    eMats[i].emissive.setRGB(br*col.r*0.5, br*col.g*0.5, br*col.b*0.5);
-  });
-
-  connections.forEach((c, ci) => {
-    const str = Math.sqrt(currentAct[c.ai] * currentAct[c.bi]);
-    c.mat.opacity = str > 0.30 ? (str - 0.30) * 0.45 : 0;
-    c.mat.color.copy(actColor(str));
-    pulseMeshes[ci].material.opacity = str > 0.40 ? (str - 0.40) * 1.0 : 0;
-    pulseMeshes[ci].material.color.copy(actColor(Math.min(1, str + 0.15)));
-  });
-}
-
-// Raycaster tooltip
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-canvas.addEventListener('mousemove', e => {
-  const r = canvas.getBoundingClientRect();
-  mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1;
-  mouse.y = -((e.clientY - r.top) / r.height) * 2 + 1;
-  raycaster.setFromCamera(mouse, camera);
-  const hits = raycaster.intersectObjects(eMeshes);
-  const tip = document.getElementById('tip');
-  if (hits.length) {
-    const obj = hits[0].object;
-    const i = obj.userData.index;
-    const el = ELECTRODES[i];
-    const fi = getFrameIdx();
-    const v = currentRec ? (currentRec.channels[el.id] || [])[fi] || 0 : 0;
-    document.getElementById('tip-id').textContent = el.id;
-    document.getElementById('tip-region').textContent = el.region;
-    document.getElementById('tip-val').textContent = `Activity: ${Math.round(v*100)}%  ·  ${v>0.65?'High':v>0.35?'Moderate':'Low'}`;
-    tip.style.display = 'block';
-    tip.style.left = (e.clientX + 15) + 'px';
-    tip.style.top = (e.clientY - 8) + 'px';
-    canvas.style.cursor = 'crosshair';
-  } else {
-    tip.style.display = 'none';
-    canvas.style.cursor = 'default';
-  }
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// RENDER LOOP
-// ─────────────────────────────────────────────────────────────────────────────
-function animate(ts) {
+function animate() {
   requestAnimationFrame(animate);
-  if (playing && currentRec) {
-    if (lastTS) playTime = (playTime + (ts - lastTS) / 1000 * playSpeed) % currentRec.duration;
-    lastTS = ts;
-    updateFrame();
-  } else lastTS = null;
+  if (playing) {
+    playTime += 0.005; // 0.25x effective speed
+    if (playTime > 10) playTime = 0;
+    document.getElementById('time-display').innerText = playTime.toFixed(2) + "s";
+    
+    // Update Electrodes & Bars
+    ELECTRODES.forEach((el, i) => {
+      const scenario = SCENARIOS[currentRecIdx];
+      let act = 0.1 + Math.random() * 0.3;
+      
+      // Scenario-specific logic
+      if (currentRecIdx === 1 && el.id === 'C4') act = 0.8; // Right Motor
+      if (currentRecIdx === 2 && el.id === 'C3') act = 0.8; // Left Motor
+      if (currentRecIdx === 0 && el.group === 'Visual') act = 0.7 + Math.sin(playTime * 5) * 0.2;
 
-  // Gentle auto-rotate when not dragging
-  if (!drag && currentRec) brainGroup.rotation.y += 0.0005;
-
-  frameCount++;
-  const pulse = 0.75 + 0.25 * Math.sin(frameCount * 0.06);
-  hMeshes.forEach((h, i) => { if (hMats[i].opacity > 0.01) hMats[i].opacity *= pulse; });
-
-  connections.forEach((c, ci) => {
-    const spd = currentAct[c.ai] + currentAct[c.bi];
-    c.pulseT = (c.pulseT + 0.005 * (1 + spd)) % 1;
-    pulseMeshes[ci].position.copy(c.curve.getPoint(c.pulseT));
-  });
-
+      const col = new THREE.Color().setHSL(0.5 + act * 0.5, 1, 0.5);
+      eMeshes[i].material.color.copy(col);
+      eMeshes[i].material.emissive.copy(col).multiplyScalar(0.5);
+      eMeshes[i].scale.setScalar(0.8 + act * 1.5);
+      
+      const bar = document.getElementById(`bar-${el.region.replace(/\s/g, '')}`);
+      if (bar) bar.style.width = (act * 100) + "%";
+    });
+  }
+  
+  brain.rotation.y += 0.002;
   renderer.render(scene, camera);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// BOOT
-// ─────────────────────────────────────────────────────────────────────────────
-function setLoadStatus(msg, pct) {
-  document.getElementById('load-status').textContent = msg;
-  document.getElementById('load-bar').style.width = pct + '%';
-}
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
 
-async function boot() {
-  setLoadStatus('Initialising…', 5);
-  buildFilterChips();
-  await new Promise(r => setTimeout(r, 100));
+buildUI();
+animate();
 
-  if (USE_FALLBACK) {
-    setLoadStatus('Using synthetic EEG data', 30);
-    await new Promise(r => setTimeout(r, 600));
-    recordings = buildFallbackData();
-    setLoadStatus('Ready', 100);
-  } else {
-    try {
-      setLoadStatus('Fetching EEG data from GitHub…', 20);
-      const res = await fetch(EEG_DATA_URL);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setLoadStatus('Parsing recordings…', 60);
-      const json = await res.json();
-      recordings = json.recordings || [];
-      if (!recordings.length) throw new Error('Empty recordings array');
-      setLoadStatus(`Loaded ${recordings.length} real EEG recordings`, 90);
-      await new Promise(r => setTimeout(r, 300));
-      setLoadStatus('Ready', 100);
-    } catch (err) {
-      setLoadStatus(`Could not load real data (${err.message}) — using synthetic`, 50);
-      await new Promise(r => setTimeout(r, 1500));
-      recordings = buildFallbackData();
-      setLoadStatus('Ready (synthetic)', 100);
-    }
-  }
-
-  await new Promise(r => setTimeout(r, 300));
-  const loadEl = document.getElementById('loading');
-  loadEl.classList.add('fade');
-  setTimeout(() => loadEl.style.display = 'none', 700);
-
-  buildRecList();
-  buildRegionList();
-  loadRecording(0);
-  animate();
-}
-
-boot();
 </script>
 </body>
 </html>
